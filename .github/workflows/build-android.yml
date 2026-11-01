@@ -4,13 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: '构建类型'
-        required: true
-        default: 'Debug'
-        type: choice
-        options: [Debug, Release]
 
 jobs:
   build:
@@ -18,7 +11,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      # GitHub Ubuntu 镜像自带 Android SDK，无需 setup-android（该 action 已不兼容新版 runner）
+      # GitHub Ubuntu 镜像自带 Android SDK
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       ORG_GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=1g
@@ -68,44 +61,13 @@ jobs:
       - name: 授予 gradlew 执行权限
         run: chmod +x android/gradlew
 
-      - name: 构建 Debug APK
-        if: ${{ github.event.inputs.build_type != 'Release' }}
+      # Release 构建会打包 JS bundle，APK 可脱离 Metro 独立运行；
+      # 签名由 gradle 决定：无 keystore.properties 时自动使用仓库内置 debug.keystore（固定，可覆盖安装）
+      - name: 构建 Release APK
         working-directory: android
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build-debug.log
-        env:
-          ORG_GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=1g
-
-      - name: 准备签名密钥
-        if: ${{ github.event.inputs.build_type == 'Release' }}
-        working-directory: android
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/yueyue.keystore
-            cat > keystore.properties <<EOF
-          storeFile=yueyue.keystore
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
-          fi
-
-      - name: 构建 Release APK
-        if: ${{ github.event.inputs.build_type == 'Release' }}
-        working-directory: android
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
-        env:
-          ORG_GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=1g
-
-      - name: 上传构建日志（失败时便于排查）
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build-*.log
-          if-no-files-found: ignore
-          retention-days: 7
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee ../build-release.log
 
       - name: 列出 APK 产物
         run: |
@@ -118,5 +80,14 @@ jobs:
           path: |
             android/app/build/outputs/apk/**/*universal.apk
             android/app/build/outputs/apk/**/*arm64-v8a.apk
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
+
+      - name: 上传构建日志（失败时便于排查）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_number }}
+          path: build-*.log
+          if-no-files-found: ignore
+          retention-days: 7
