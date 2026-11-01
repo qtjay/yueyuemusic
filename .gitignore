@@ -79,3 +79,5 @@ buck-out/
 # 构建产物（不提交）
 /apk/
 *.apk
+
+/apk-download.zip
