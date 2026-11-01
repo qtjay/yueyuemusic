@@ -118,7 +118,7 @@ export const getTheme = async() => {
   //   // : 'china_ink'
   //   : settingState.setting['theme.id']
   let themeId = settingState.setting['common.isAutoTheme'] && shouldUseDarkColors
-    ? 'black'
+    ? 'yueyue_dark'
     : settingState.setting['theme.id']
   // themeId = 'naruto'
   // themeId = 'pink'
@@ -128,7 +128,7 @@ export const getTheme = async() => {
     userThemes = await getUserTheme()
     theme = userThemes.find(theme => theme.id == themeId)
     if (!theme) {
-      themeId = settingState.setting['theme.id'] == 'auto' && shouldUseDarkColors ? 'black' : 'green'
+      themeId = settingState.setting['theme.id'] == 'auto' && shouldUseDarkColors ? 'yueyue_dark' : 'yueyue'
       theme = themes.find(theme => theme.id == themeId) as LX.Theme
     }
   }
