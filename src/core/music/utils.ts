@@ -11,6 +11,7 @@ import settingState from '@/store/setting/state'
 import { requestMsg } from '@/utils/message'
 import BackgroundTimer from 'react-native-background-timer'
 import { apis } from '@/utils/musicSdk/api-source'
+import { getCurrentSourceId, isUserApiMode, markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
 
 const getOtherSourcePromises = new Map()
@@ -295,36 +296,63 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   quality: LX.Quality
   isFromCache: boolean
 }> => {
-  if (!await global.lx.apiInitPromise[0]) throw new Error('source init failed')
+  if (!await global.lx.apiInitPromise[0]) {
+    // 当前音源脚本初始化失败：自动随机换源后重试
+    markSourceFailed(getCurrentSourceId())
+    const newId = await switchToRandomSource()
+    if (!newId || !await global.lx.apiInitPromise[0]) throw new Error('source init failed')
+  }
   // console.log(musicInfo.source)
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
 
-  let reqPromise
-  try {
-    reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), targetQuality).promise
-  } catch (err: any) {
-    reqPromise = Promise.reject(err)
+  const requestUrl = async(): Promise<{ url: string, type: LX.Quality }> => {
+    let reqPromise
+    try {
+      reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), targetQuality).promise
+    } catch (err: any) {
+      reqPromise = Promise.reject(err)
+    }
+    return reqPromise
   }
-  return reqPromise.then(({ url, type }: { url: string, type: LX.Quality }) => {
+
+  let err: any
+  try {
+    const { url, type } = await requestUrl()
     return { musicInfo, url, quality: type, isFromCache: false }
-  }).catch(async(err: any) => {
-    console.log(err)
-    if (!allowToggleSource || err.message == requestMsg.tooManyRequests) throw err
-    onToggleSource()
-    // eslint-disable-next-line @typescript-eslint/promise-function-async
-    return getOtherSource(musicInfo).then(otherSource => {
-      // console.log('find otherSource', otherSource.length)
-      if (otherSource.length) {
-        return getOnlineOtherSourceMusicUrl({
-          musicInfos: [...otherSource],
-          onToggleSource,
-          quality,
-          isRefresh,
-          retryedSource: [musicInfo.source],
-        })
+  } catch (e: any) {
+    console.log(e)
+    err = e
+    // 自定义音源取链接失败：标记该源，随机换源后重试一次
+    if (isUserApiMode() && err.message != requestMsg.tooManyRequests) {
+      markSourceFailed(getCurrentSourceId())
+      const newId = await switchToRandomSource()
+      // 新音源必须支持这首歌的平台源，否则重试无意义
+      if (newId && (global.lx.apis as Record<string, any> | undefined)?.[musicInfo.source]) {
+        try {
+          const { url, type } = await requestUrl()
+          return { musicInfo, url, quality: type, isFromCache: false }
+        } catch (retryErr: any) {
+          console.log(retryErr)
+          err = retryErr
+        }
       }
-      throw err
-    })
+    }
+  }
+  if (!allowToggleSource || err.message == requestMsg.tooManyRequests) throw err
+  onToggleSource()
+  // eslint-disable-next-line @typescript-eslint/promise-function-async
+  return getOtherSource(musicInfo).then(otherSource => {
+    // console.log('find otherSource', otherSource.length)
+    if (otherSource.length) {
+      return getOnlineOtherSourceMusicUrl({
+        musicInfos: [...otherSource],
+        onToggleSource,
+        quality,
+        isRefresh,
+        retryedSource: [musicInfo.source],
+      })
+    }
+    throw err
   })
 }
 
