@@ -70,5 +70,8 @@ buck-out/
 # 本地参考仓库（lx-music-mobile / musicsquare / lx-music-source 源码副本，仅本地对照用）
 /.ref/
 
+# 本地推送专用 SSH 密钥（绝不提交）
+/.ssh-local/
+
 # WorkBuddy 工作区数据
 /.workbuddy/
