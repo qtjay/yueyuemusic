@@ -295,42 +295,6 @@ const defaultThemes = [
       'c-badge-tertiary': 'var(c-primary-light-100)',
     },
   },
-  {
-    id: 'yueyue',
-    name: '悦悦哄睡',
-    isDark: false,
-    config: {
-      primary: 'rgb(49, 194, 124)',
-      font: 'rgb(55, 65, 60)',
-      'c-app-background': 'rgba(247, 250, 248, 1)',
-      'c-main-background': 'rgba(255, 255, 255, 1)',
-      'bg-image': '',
-      'bg-image-position': 'center',
-      'bg-image-size': 'cover',
-
-      'c-badge-primary': 'var(c-primary)',
-      'c-badge-secondary': '#5cbf9b',
-      'c-badge-tertiary': '#e7aa36',
-    },
-  },
-  {
-    id: 'yueyue_dark',
-    name: '悦悦夜眠',
-    isDark: true,
-    config: {
-      primary: 'rgb(61, 214, 140)',
-      font: 'rgb(236, 238, 237)',
-      'c-app-background': 'rgba(0, 0, 0, 0)',
-      'c-main-background': 'rgba(35, 38, 36, 0.95)',
-      'bg-image': 'landingMoon.png',
-      'bg-image-position': 'center',
-      'bg-image-size': 'cover',
-
-      'c-badge-primary': 'var(c-primary)',
-      'c-badge-secondary': '#5cbf9b',
-      'c-badge-tertiary': '#e7aa36',
-    },
-  },
 ]
 
 const themes = defaultThemes.map(({ config: { primary, font, ...extInfo }, ...themeInfo }) => {

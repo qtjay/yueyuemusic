@@ -1,5 +1,5 @@
 export const HEADER_HEIGHT = 42
-export const LIST_ITEM_HEIGHT = 60
+export const LIST_ITEM_HEIGHT = 54
 export const LIST_SCROLL_POSITION_KEY = '__LIST_SCROLL_POSITION_KEY__'
 
 export const SPLIT_CHAR = {
@@ -95,7 +95,7 @@ export const storageDataPrefixOld = {
   notificationTipEnable: '@notification_tip_enable',
 } as const
 
-export const APP_PROVIDER_NAME = 'cn.qtjay.yueyuemusic.provider'
+export const APP_PROVIDER_NAME = 'cn.toside.music.mobile.provider'
 
 
 export const NAV_MENUS = [
@@ -103,7 +103,7 @@ export const NAV_MENUS = [
   { id: 'nav_songlist', icon: 'album' },
   { id: 'nav_top', icon: 'leaderboard' },
   { id: 'nav_love', icon: 'love' },
-  { id: 'nav_download', icon: 'download-2' },
+  // { id: 'download', icon: 'download-2' },
   { id: 'nav_setting', icon: 'setting' },
 ] as const
 

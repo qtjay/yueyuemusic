@@ -23,7 +23,6 @@ const defaultSetting: LX.AppSetting = {
   'player.volume': 1,
   'player.playbackRate': 1,
   'player.cacheSize': '1024',
-  'player.autoCache': false,
   'player.timeoutExit': '',
   'player.timeoutExitPlayed': true,
   'player.isAutoCleanPlayedList': false,
@@ -73,9 +72,10 @@ const defaultSetting: LX.AppSetting = {
 
   'sync.enable': false,
 
-  'theme.id': 'yueyue',
-  'theme.lightId': 'yueyue',
-  'theme.darkId': 'yueyue_dark',
+  // 'theme.id': 'blue_plus',
+  'theme.id': 'green',
+  'theme.lightId': 'green',
+  'theme.darkId': 'black',
   'theme.hideBgDark': false,
   'theme.dynamicBg': false,
   'theme.fontShadow': false,

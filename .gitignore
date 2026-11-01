@@ -75,3 +75,7 @@ buck-out/
 
 # WorkBuddy 工作区数据
 /.workbuddy/
+
+# 构建产物（不提交）
+/apk/
+*.apk

@@ -5,7 +5,6 @@ import {
 } from '@/utils/data'
 import { updateListMusics } from '@/core/list'
 import settingState from '@/store/setting/state'
-import { cacheMusic, findAnyCachedFilePath, getCachedMusicFilePath } from '@/core/musicCache'
 
 import {
   buildLyricInfo,
@@ -54,24 +53,12 @@ export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSou
   //   // return Promise.reject(new Error('该歌曲没有可播放的音频'))
   // }
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
-
-  // 已缓存到本地的歌曲直接走本地文件，支持离线播放
-  if (!isRefresh) {
-    const localPath = await getCachedMusicFilePath(musicInfo, targetQuality) ?? await findAnyCachedFilePath(musicInfo)
-    if (localPath) return localPath
-  }
-
   const cachedUrl = await getStoreMusicUrl(musicInfo, targetQuality)
   if (cachedUrl && !isRefresh) return cachedUrl
 
   return handleGetOnlineMusicUrl({ musicInfo, quality, onToggleSource, isRefresh, allowToggleSource }).then(({ url, quality: targetQuality, musicInfo: targetMusicInfo, isFromCache }) => {
     if (targetMusicInfo.id != musicInfo.id && !isFromCache) void saveMusicUrl(targetMusicInfo, targetQuality, url)
     void saveMusicUrl(musicInfo, targetQuality, url)
-
-    // 开启自动缓存后，在线取到地址即在后台落盘，下次可离线播放
-    if (settingState.setting['player.autoCache'] && url.startsWith('http')) {
-      void cacheMusic(musicInfo, targetQuality, url).catch(() => {})
-    }
     return url
   })
 }

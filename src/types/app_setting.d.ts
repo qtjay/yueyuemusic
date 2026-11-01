@@ -147,11 +147,6 @@ declare global {
       'player.cacheSize': string
 
       /**
-       * 播放在线歌曲时是否自动缓存到本地，便于离线播放
-       */
-      'player.autoCache': boolean
-
-      /**
        * 定时暂停播放-倒计时时间
        */
       'player.timeoutExit': string

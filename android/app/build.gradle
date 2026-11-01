@@ -108,10 +108,10 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    // namespace 决定 R / BuildConfig 的生成包路径，必须与 Java 源码包名（cn.toside.music.mobile）保持一致
+    // namespace 决定 R/BuildConfig 的包路径，必须与 Java 源码包名保持一致，禁止改动
     namespace "cn.toside.music.mobile"
     defaultConfig {
-        // applicationId 是安装包的唯一标识，可以独立于 namespace
+        // applicationId 是安装包唯一标识，升级全程保持不变以支持覆盖安装
         applicationId "cn.qtjay.yueyuemusic"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
@@ -127,29 +127,31 @@ android {
             include (*reactNativeArchitectures())
         }
     }
-    // 未提供 keystore.properties 时，release 回退到 debug 签名，保证 CI 无密钥也能出包
-    def uploadKeystoreFile = rootProject.file("keystore.properties")
-    def hasUploadKeystore = uploadKeystoreFile.exists()
-    def uploadKeystoreProps = new Properties()
-    if (hasUploadKeystore) uploadKeystoreProps.load(new FileInputStream(uploadKeystoreFile))
-
     signingConfigs {
         release {
+            // 签名策略：默认使用仓库内置的 debug.keystore（文件固定不变），
+            // 保证每次 CI 构建的签名一致，APK 可直接覆盖安装。
+            // 如需正式密钥，提供 keystore.properties 或 MYAPP_UPLOAD_* 属性即可自动切换。
             if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
                 storeFile file(MYAPP_UPLOAD_STORE_FILE)
                 storePassword MYAPP_UPLOAD_STORE_PASSWORD
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
                 keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            } else if (hasUploadKeystore) {
-                storeFile file(uploadKeystoreProps['storeFile'])
-                storePassword uploadKeystoreProps['storePassword']
-                keyAlias uploadKeystoreProps['keyAlias']
-                keyPassword uploadKeystoreProps['keyPassword']
             } else {
-                storeFile file('debug.keystore')
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
+                def keystorePropertiesFile = rootProject.file("keystore.properties")
+                if (keystorePropertiesFile.exists()) {
+                    def keystoreProperties = new Properties()
+                    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+                    storeFile file(keystoreProperties['storeFile'])
+                    storePassword keystoreProperties['storePassword']
+                    keyAlias keystoreProperties['keyAlias']
+                    keyPassword keystoreProperties['keyPassword']
+                } else {
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
+                }
             }
         }
         debug {
@@ -166,6 +168,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
 
