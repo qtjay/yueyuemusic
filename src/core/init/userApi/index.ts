@@ -4,6 +4,7 @@ import settingState from '@/store/setting/state'
 import BackgroundTimer from 'react-native-background-timer'
 import { fetchData } from './request'
 import { getUserApiList } from '@/utils/data'
+import { initBuiltinMusicSources } from '@/core/musicSource'
 import { confirmDialog, openUrl, tipDialog } from '@/utils/tools'
 
 
@@ -251,6 +252,9 @@ export default async(setting: LX.AppSetting) => {
         break
     }
   })
+
+  // 首次启动注入内置音源（洛雪音源集合）
+  await initBuiltinMusicSources()
 
   setUserApiList(await getUserApiList())
 }
