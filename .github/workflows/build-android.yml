@@ -71,7 +71,9 @@ jobs:
       - name: 构建 Debug APK
         if: ${{ github.event.inputs.build_type != 'Release' }}
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build-debug.log
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build-debug.log
         env:
           ORG_GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=1g
 

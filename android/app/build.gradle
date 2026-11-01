@@ -108,8 +108,10 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "cn.qtjay.yueyuemusic"
+    // namespace 决定 R / BuildConfig 的生成包路径，必须与 Java 源码包名（cn.toside.music.mobile）保持一致
+    namespace "cn.toside.music.mobile"
     defaultConfig {
+        // applicationId 是安装包的唯一标识，可以独立于 namespace
         applicationId "cn.qtjay.yueyuemusic"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
