@@ -42,7 +42,8 @@ const state: InitState = {
   fetchingListStatus: {},
 }
 
-state.allList = [state.defaultList, state.loveList]
+// 我的收藏置顶，作为收藏歌曲的默认歌单
+state.allList = [state.loveList, state.defaultList]
 
 
 export default state

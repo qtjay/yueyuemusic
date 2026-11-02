@@ -147,6 +147,11 @@ declare global {
       'player.cacheSize': string
 
       /**
+       * 播放过的歌曲是否自动缓存到本地
+       */
+      'cache.auto': boolean
+
+      /**
        * 定时暂停播放-倒计时时间
        */
       'player.timeoutExit': string

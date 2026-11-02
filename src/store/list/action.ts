@@ -4,7 +4,8 @@ import state, { type InitState } from './state'
 export default {
   setUserLists(userList: LX.List.UserListInfo[]) {
     state.userList = userList
-    state.allList = [state.defaultList, state.loveList, ...state.userList]
+    // 我的收藏置顶，作为收藏歌曲的默认歌单
+    state.allList = [state.loveList, state.defaultList, ...state.userList]
 
     global.state_event.mylistUpdated(state.allList)
   },
