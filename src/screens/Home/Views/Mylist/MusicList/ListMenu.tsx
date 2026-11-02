@@ -25,6 +25,7 @@ export interface ListMenuProps {
   onToggleSource: (selectInfo: SelectInfo) => void
   onMusicSourceDetail: (selectInfo: SelectInfo) => void
   onRemoveCache: (selectInfo: SelectInfo) => void
+  onBatchCache: (selectInfo: SelectInfo) => void
   onDislikeMusic: (selectInfo: SelectInfo) => void
   onRemove: (selectInfo: SelectInfo) => void
 }
@@ -73,6 +74,7 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       { action: 'playLater', label: t('play_later') },
       // { action: 'download', label: '下载' },
       { action: 'add', label: t('add_to') },
+      { action: 'batchCache', label: '批量缓存' },
       { action: 'move', label: t('move_to') },
       { action: 'changePosition', label: t('change_position') },
       { action: 'toggleSource', label: t('toggle_source') },
@@ -147,6 +149,9 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
         break
       case 'removeCache':
         props.onRemoveCache(selectInfo)
+        break
+      case 'batchCache':
+        props.onBatchCache(selectInfo)
         break
       case 'dislike':
         props.onDislikeMusic(selectInfo)

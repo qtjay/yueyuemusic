@@ -6,7 +6,8 @@ import { clearMusicUrl, handleDislikeMusic, handlePlay, handlePlayLater, handleR
 import List, { type ListType } from './List'
 import ListMusicAdd, { type MusicAddModalType as ListMusicAddType } from '@/components/MusicAddModal'
 import ListMusicMultiAdd, { type MusicMultiAddModalType as ListAddMultiType } from '@/components/MusicMultiAddModal'
-import { createStyle } from '@/utils/tools'
+import { createStyle, toast } from '@/utils/tools'
+import { batchCacheMusic } from '@/core/musicCache/batch'
 import { type LayoutChangeEvent, View } from 'react-native'
 import ActiveList, { type ActiveListType } from './ActiveList'
 import MultipleModeBar, { type SelectMode, type MultipleModeBarType } from './MultipleModeBar'
@@ -108,6 +109,18 @@ export default () => {
       listMusicAddRef.current?.show({ musicInfo: info.musicInfo, listId: info.listId, isMove: true })
     }
   }, [])
+  const handleBatchCache = useCallback((info: SelectInfo) => {
+    const list = info.selectedList.length ? info.selectedList : [info.musicInfo]
+    hancelExitSelect()
+    toast(`开始缓存 ${list.length} 首歌曲...`)
+    void batchCacheMusic(list, {
+      listId: info.listId,
+      listName: listState.allList.find(l => l.id == info.listId)?.name,
+    }).then(res => {
+      toast(`缓存完成：成功 ${res.success} 首，跳过 ${res.skipped} 首，失败 ${res.failed} 首`)
+    })
+  }, [])
+
   const handleEditMetadata = useCallback((info: SelectInfo) => {
     if (info.musicInfo.source != 'local') return
     selectedInfoRef.current = info
@@ -165,6 +178,7 @@ export default () => {
         onChangePosition={info => musicPositionModalRef.current?.show(info)}
         onToggleSource={info => musicToggleModalRef.current?.show(info)}
         onRemoveCache={info => { void clearMusicUrl(info.musicInfo) }}
+        onBatchCache={handleBatchCache}
       />
       <MetadataEditModal
         ref={metadataEditTypeRef}
