@@ -5,6 +5,7 @@ import { setApiSource } from '@/core/apiSource'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
 import settingState from '@/store/setting/state'
+import themeState from '@/store/theme/state'
 import { getUserApiList } from '@/utils/data'
 import { Chip, MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
 import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
@@ -111,7 +112,7 @@ export default ({ componentId }: { componentId: string }) => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={colors.text == '#333b37' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
+      <StatusBar barStyle={themeState.theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.header} />
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>

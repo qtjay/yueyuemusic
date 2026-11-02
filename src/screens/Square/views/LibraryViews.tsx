@@ -279,7 +279,7 @@ export const NowPlayingView = memo(({ colors, isTablet, onBack }: {
     <View style={[styles.npContainer, { backgroundColor: colors.bg }]}>
       <View style={styles.npHeader}>
         <TouchableOpacity onPress={onBack} style={styles.npBack}>
-          <Icon name="back" color={colors.text} size={22} />
+          <Icon name="back-2" color={colors.text} size={22} />
         </TouchableOpacity>
         <Text style={[styles.npHeaderTitle, { color: colors.text }]}>正在播放</Text>
       </View>
@@ -294,13 +294,13 @@ export const NowPlayingView = memo(({ colors, isTablet, onBack }: {
       <Text style={[styles.hint, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr} / {playerState.progress.maxPlayTimeStr}</Text>
       <View style={styles.npControls}>
         <TouchableOpacity onPress={() => { void playPrev() }} style={styles.npBtn}>
-          <Icon name="prev" color={colors.text} size={26} />
+          <Icon name="prevMusic" color={colors.text} size={26} />
         </TouchableOpacity>
         <TouchableOpacity onPress={togglePlay} style={[styles.npPlayBtn, { backgroundColor: colors.accent }]}>
           <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={28} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { void playNext(true) }} style={styles.npBtn}>
-          <Icon name="next" color={colors.text} size={26} />
+          <Icon name="nextMusic" color={colors.text} size={26} />
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.npLyric}>

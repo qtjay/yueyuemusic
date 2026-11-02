@@ -140,7 +140,7 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
       {interval ? <Text style={[styles.trackTime, { color: colors.text3 }]}>{interval}</Text> : null}
       {onCache
         ? <TouchableOpacity onPress={onCache} style={styles.trackAction}>
-            <Icon name={cached ? 'check' : 'download-2'} color={cached ? colors.accent : colors.text3} size={18} />
+            <Icon name={cached ? 'checkbox-marked' : 'download-2'} color={cached ? colors.accent : colors.text3} size={18} />
           </TouchableOpacity>
         : null}
     </TouchableOpacity>
@@ -231,14 +231,14 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
       <View style={styles.miniControls}>
         {isTablet
           ? <TouchableOpacity onPress={() => { void playPrev() }} style={styles.miniBtn}>
-              <Icon name="prev" color={colors.text2} size={20} />
+              <Icon name="prevMusic" color={colors.text2} size={20} />
             </TouchableOpacity>
           : null}
         <TouchableOpacity onPress={togglePlay} style={[styles.miniPlayBtn, { backgroundColor: colors.accent }]}>
           <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={20} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { void playNext(true) }} style={styles.miniBtn}>
-          <Icon name="next" color={colors.text2} size={20} />
+          <Icon name="nextMusic" color={colors.text2} size={20} />
         </TouchableOpacity>
       </View>
       <Text style={[styles.miniTime, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr} / {playerState.progress.maxPlayTimeStr}</Text>
