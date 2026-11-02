@@ -5,6 +5,7 @@ import { isActive } from '@/utils/tools'
 import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
 import { setNowPlayTime } from '@/core/player/progress'
+import { getCurrentSourceId, isUserApiMode, markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
 
 export default () => {
@@ -13,22 +14,25 @@ export default () => {
 
   let loadingTimeout: number | null = null
   let delayNextTimeout: number | null = null
+
+  /** 音频加载失败时标记当前音源并随机换源，让随后的 URL 刷新走新音源 */
+  const switchSourceOnError = async() => {
+    if (!isUserApiMode()) return
+    markSourceFailed(getCurrentSourceId())
+    await switchToRandomSource()
+  }
+
   const startLoadingTimeout = () => {
     // console.log('start load timeout')
     clearLoadingTimeout()
-    loadingTimeout = BackgroundTimer.setTimeout(() => {
-      // if (global.lx.isPlayedStop) {
-      //   prevTimeoutId = null
-      //   setStatusText('')
-      //   return
-      // }
-
-      // 如果加载超时，则尝试刷新URL
+    loadingTimeout = BackgroundTimer.setTimeout(async() => {
+      // 如果加载超时，则尝试刷新URL（先换音源）
       if (prevTimeoutId == playerState.musicInfo.id) {
         prevTimeoutId = null
         void playNext(true)
       } else {
         prevTimeoutId = playerState.musicInfo.id
+        await switchSourceOnError()
         if (playerState.playMusicInfo.musicInfo) setMusicUrl(playerState.playMusicInfo.musicInfo, true)
       }
     }, 25000)
@@ -86,12 +90,14 @@ export default () => {
     setStatusText(global.i18n.t('player__buffering'))
   }
 
-  const handleError = () => {
+  const handleError = async() => {
     if (!playerState.musicInfo.id) return
     clearLoadingTimeout()
     if (global.lx.isPlayedStop) return
     if (playerState.playMusicInfo.musicInfo && retryNum < 2) { // 若音频URL无效则尝试刷新2次URL
       let musicInfo = playerState.playMusicInfo.musicInfo
+      // 每次刷新前先换源，避免同一个坏源反复给出失效链接
+      await switchSourceOnError()
       void getPosition().then((position) => {
         if (position) setNowPlayTime(position)
       }).finally(() => {
