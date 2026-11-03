@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { batchCacheMusic } from '@/core/musicCache/batch'
@@ -7,7 +7,7 @@ import { toast } from '@/utils/tools'
 import playerState from '@/store/player/state'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
-import { Chip, Empty, SectionHeader, SectionShell, TrackRow } from '../components'
+import { Chip, Empty, SearchBox, SectionHeader, SectionShell, TrackRow } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 export interface SearchQuery {
@@ -18,13 +18,17 @@ export interface SearchQuery {
 const HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', '毛不易', '轻音乐', '摇篮曲', '白噪音']
 
 /** 发现 / 聚合搜索 / 历史播放（musicsquare 的 discover + search + history 合并） */
-export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong }: {
+export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong, searchText, onChangeSearchText, onSearch, onOpenDrawer }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
   query: SearchQuery
   onHotWord: (word: string) => void
   onPlaySong: () => void
+  searchText: string
+  onChangeSearchText: (text: string) => void
+  onSearch: () => void
+  onOpenDrawer: () => void
 }) => {
   const [results, setResults] = useState<LX.Music.MusicInfoOnline[]>([])
   const [loading, setLoading] = useState(false)
@@ -63,8 +67,22 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
       <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="发现音乐" hint="输入歌名 / 歌手，回车搜索" />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        <SectionHeader colors={colors} title="发现音乐" hint="搜索 / 热门词" />
+        <View style={styles.searchRow}>
+          {!isTablet
+            ? <TouchableOpacity onPress={onOpenDrawer} style={styles.menuBtn}>
+                <Text style={[styles.menuText, { color: colors.text }]}>☰</Text>
+              </TouchableOpacity>
+            : null}
+          <SearchBox
+            colors={colors}
+            value={searchText}
+            onChangeText={onChangeSearchText}
+            onSubmit={onSearch}
+            placeholder="输入歌名 / 歌手，回车搜索…"
+          />
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACE.sm }}>
           {HOT_WORDS.map(word => <Chip key={word} colors={colors} label={word} onPress={() => onHotWord(word)} />)}
         </View>
       </SectionShell>
@@ -143,3 +161,9 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => (
   </View>
 ))
 LeaderboardView.displayName = 'LeaderboardView'
+
+const styles = StyleSheet.create({
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACE.sm },
+  menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm, flexShrink: 0 },
+  menuText: { fontSize: 22 },
+})

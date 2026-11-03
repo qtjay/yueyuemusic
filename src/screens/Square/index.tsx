@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { setApiSource } from '@/core/apiSource'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
 import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import { getUserApiList } from '@/utils/data'
-import { Chip, MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
+import { Chip, MiniPlayer, SideNav, type NavItem } from './components'
 import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
 import { DiscoverSearchView, LeaderboardView, SonglistView, type SearchQuery } from './views/MainViews'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
@@ -77,6 +77,10 @@ export default ({ componentId }: { componentId: string }) => {
           query={query}
           onHotWord={handleHotWord}
           onPlaySong={handlePlaySong}
+          searchText={searchText}
+          onChangeSearchText={setSearchText}
+          onSearch={doSearch}
+          onOpenDrawer={() => setDrawerOpen(true)}
         />
       )
     }
@@ -115,20 +119,6 @@ export default ({ componentId }: { componentId: string }) => {
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>
-        <View style={[styles.topbar, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
-          {!isTablet
-            ? <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.menuBtn}>
-                <Text style={[styles.menuText, { color: colors.text }]}>☰</Text>
-              </TouchableOpacity>
-            : null}
-          <SearchBox
-            colors={colors}
-            value={searchText}
-            onChangeText={setSearchText}
-            onSubmit={doSearch}
-            placeholder="输入歌名 / 歌手，回车搜索…"
-          />
-        </View>
         {!isTablet ? sourceChips : null}
 
         <View style={styles.content}>
@@ -155,9 +145,6 @@ export default ({ componentId }: { componentId: string }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   main: { flex: 1 },
-  topbar: { flexDirection: 'row', alignItems: 'center', width: '100%', height: 56, minHeight: 56, flexShrink: 0, paddingHorizontal: SPACE.lg, borderBottomWidth: 1 },
-  menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
-  menuText: { fontSize: 22 },
   chipsRow: { height: 48, flexGrow: 0, flexShrink: 0, paddingVertical: SPACE.sm, borderBottomWidth: 0 },
   content: { flex: 1, minHeight: 0 },
   drawerOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 10 },
