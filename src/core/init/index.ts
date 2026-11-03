@@ -11,7 +11,8 @@ import { initDeeplink } from './deeplink'
 import { setApiSource } from '@/core/apiSource'
 import commonActions from '@/store/common/action'
 import settingState from '@/store/setting/state'
-import { checkUpdate } from '@/core/version'
+// 本项目为 fork，不检查上游 LX Music 的版本更新弹窗
+// import { checkUpdate } from '@/core/version'
 import { bootLog } from '@/utils/bootLog'
 import { cheatTip } from '@/utils/tools'
 import { autoSelectAvailableSource } from '@/core/musicSource/autoSelect'
@@ -22,7 +23,7 @@ const handlePushedHomeScreen = async() => {
   if (settingState.setting['common.isAgreePact']) {
     if (isFirstPush) {
       isFirstPush = false
-      void checkUpdate()
+      // void checkUpdate()
       void initDeeplink()
     }
   } else {
