@@ -95,7 +95,7 @@ export default ({ componentId }: { componentId: string }) => {
 
   const sourceChips = apis.length
     ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ paddingHorizontal: SPACE.lg }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ paddingHorizontal: SPACE.lg, alignItems: 'center' }}>
           {apis.slice(0, 8).map(api => (
             <Chip
               key={api.id}
@@ -155,11 +155,11 @@ export default ({ componentId }: { componentId: string }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   main: { flex: 1 },
-  topbar: { flexDirection: 'row', alignItems: 'center', width: '100%', height: 56, minHeight: 56, paddingHorizontal: SPACE.lg, borderBottomWidth: 1 },
+  topbar: { flexDirection: 'row', alignItems: 'center', width: '100%', height: 56, minHeight: 56, flexShrink: 0, paddingHorizontal: SPACE.lg, borderBottomWidth: 1 },
   menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   menuText: { fontSize: 22 },
-  chipsRow: { paddingVertical: SPACE.sm, borderBottomWidth: 0 },
-  content: { flex: 1 },
+  chipsRow: { height: 48, flexGrow: 0, flexShrink: 0, paddingVertical: SPACE.sm, borderBottomWidth: 0 },
+  content: { flex: 1, minHeight: 0 },
   drawerOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 10 },
   drawerMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   drawerPanel: { backgroundColor: 'transparent' },
