@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
 import playerState from '@/store/player/state'
@@ -170,11 +170,11 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
       </View>
       {!isTablet && onClose
         ? <TouchableOpacity onPress={onClose} style={styles.sideClose}>
-            <Icon name="close" color={colors.text2} size={18} />
+            <Text style={[styles.sideCloseText, { color: colors.text2 }]}>✕</Text>
           </TouchableOpacity>
         : null}
     </View>
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: SPACE.xl }}>
+    <View style={styles.navItems}>
       <Text style={[styles.navGroupTitle, { color: colors.text3 }]}>音乐</Text>
       {items.map(item => {
         const active = item.id == activeId
@@ -191,7 +191,7 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
           </TouchableOpacity>
         )
       })}
-    </ScrollView>
+    </View>
     <Text style={[styles.sideFooter, { color: colors.text3 }]}>基于 LX Music · 简洁版</Text>
   </View>
 ))
@@ -275,13 +275,15 @@ const styles = StyleSheet.create({
   qualityTag: { fontSize: 10, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: SPACE.sm, overflow: 'hidden' },
   trackTime: { width: 46, fontSize: 11, textAlign: 'right' },
   trackAction: { paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm },
-  sideNav: { width: 236, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
+  sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
+  navItems: { flexShrink: 0 },
   brand: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },
   brandMark: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   brandMarkText: { color: '#fff', fontSize: 20 },
   brandName: { fontSize: 15, fontWeight: '600' },
   brandSub: { fontSize: 10, marginTop: 2 },
   sideClose: { marginLeft: 'auto', padding: SPACE.sm },
+  sideCloseText: { fontSize: 18 },
   navGroupTitle: { fontSize: 11, paddingHorizontal: SPACE.sm, marginBottom: SPACE.sm },
   navItem: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: 11, marginBottom: 2 },
   navLabel: { fontSize: 14, marginLeft: SPACE.md },

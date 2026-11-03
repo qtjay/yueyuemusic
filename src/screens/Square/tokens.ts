@@ -40,7 +40,7 @@ export type SquareColors = typeof COLOR.light | typeof COLOR.dark
 
 export const RADIUS = { sm: 10, md: 14, lg: 18, pill: 999 } as const
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const
-export const SIDEBAR_W = 236
+export const SIDEBAR_W = 200
 export const PLAYER_H = 84
 export const TABLET_BREAKPOINT = 600
 export const TRACK_ROW_H = 60
