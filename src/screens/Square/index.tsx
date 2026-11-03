@@ -150,5 +150,5 @@ const styles = StyleSheet.create({
   headerMenuText: { fontSize: 22 },
   content: { flex: 1, minHeight: 0 },
   drawerMask: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 10, elevation: 10 },
-  drawerPanel: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 11, elevation: 11 },
+  drawerPanel: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 11, elevation: 11, paddingTop: StatusBar.currentHeight ?? 0 },
 })
