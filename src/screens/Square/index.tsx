@@ -127,14 +127,14 @@ export default ({ componentId }: { componentId: string }) => {
             : renderView()}
         </View>
 
-        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
+        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} onOpenMenu={() => setDrawerOpen(true)} />
       </View>
 
       {!isTablet && drawerOpen
         ? (
             <View style={styles.drawerOverlay}>
-              <TouchableOpacity style={styles.drawerMask} onPress={() => setDrawerOpen(false)} />
               <View style={[styles.drawerPanel, { width: Math.min(SIDEBAR_W, 300) }]}>{sideNav}</View>
+              <TouchableOpacity style={styles.drawerMask} onPress={() => setDrawerOpen(false)} />
             </View>
           )
         : null}
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   chipsRow: { height: 48, flexGrow: 0, flexShrink: 0, paddingVertical: SPACE.sm, borderBottomWidth: 0 },
   content: { flex: 1, minHeight: 0 },
-  drawerOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 10 },
+  drawerOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 10, elevation: 10 },
   drawerMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  drawerPanel: { backgroundColor: 'transparent' },
+  drawerPanel: { backgroundColor: 'transparent', height: '100%' },
 })

@@ -197,10 +197,12 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
 ))
 SideNav.displayName = 'SideNav'
 
-export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
+export const MiniPlayer = memo(({ colors, isTablet, onOpen, onOpenMenu }: {
   colors: SquareColors
   isTablet: boolean
   onOpen: () => void
+  /** 手机形态下常驻的抽屉入口，任何页面都能打开侧栏 */
+  onOpenMenu?: () => void
 }) => {
   usePlayerTick()
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
@@ -216,6 +218,11 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
       <View style={[styles.miniProgressTrack, { backgroundColor: colors.surface3 }]}>
         <View style={[styles.miniProgressBar, { backgroundColor: colors.accent, width: `${progress * 100}%` }]} />
       </View>
+      {!isTablet && onOpenMenu
+        ? <TouchableOpacity onPress={onOpenMenu} style={styles.miniMenuBtn}>
+            <Text style={[styles.miniMenuText, { color: colors.text }]}>☰</Text>
+          </TouchableOpacity>
+        : null}
       <TouchableOpacity onPress={onOpen} style={styles.miniInfo}>
         <View style={[styles.miniCover, { backgroundColor: colors.accentSoft }]}>
           <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
@@ -282,6 +289,8 @@ const styles = StyleSheet.create({
   miniPlayer: { borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.lg, position: 'relative', flexShrink: 0 },
   miniProgressTrack: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
   miniProgressBar: { height: 3 },
+  miniMenuBtn: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
+  miniMenuText: { fontSize: 20 },
   miniInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   miniCover: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   miniName: { fontSize: 14, fontWeight: '500' },
