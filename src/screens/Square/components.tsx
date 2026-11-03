@@ -151,28 +151,23 @@ export interface NavItem {
   icon: string
 }
 
-export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onClose }: {
+export const SideNav = memo(({ colors, items, activeId, onSelect }: {
   colors: SquareColors
   items: NavItem[]
   activeId: string
   onSelect: (id: string) => void
-  isTablet: boolean
+  isTablet?: boolean
   onClose?: () => void
 }) => (
   <View style={[styles.sideNav, { backgroundColor: colors.header, borderRightColor: colors.line }]}>
     <View style={styles.brand}>
-      <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
-        <Text style={styles.brandMarkText}>♪</Text>
-      </View>
-      <View style={styles.brandText}>
+      <View style={styles.brandRow}>
+        <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
+          <Text style={styles.brandMarkText}>♪</Text>
+        </View>
         <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>悦悦哄睡</Text>
-        <Text style={[styles.brandSub, { color: colors.text3 }]} numberOfLines={1}>Music Square</Text>
       </View>
-      {!isTablet && onClose
-        ? <TouchableOpacity onPress={onClose} style={styles.sideClose}>
-            <Text style={[styles.sideCloseText, { color: colors.text2 }]}>✕</Text>
-          </TouchableOpacity>
-        : null}
+      <Text style={[styles.brandSub, { color: colors.text3 }]}>Music Square</Text>
     </View>
     <View style={styles.navItems}>
       <Text style={[styles.navGroupTitle, { color: colors.text3 }]}>音乐</Text>
@@ -181,7 +176,7 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
         return (
           <TouchableOpacity
             key={item.id}
-            onPress={() => { onSelect(item.id); if (!isTablet) onClose?.() }}
+            onPress={() => onSelect(item.id)}
             style={[styles.navItem, {
               backgroundColor: active ? colors.accentSoft : 'transparent',
             }]}
@@ -197,12 +192,10 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
 ))
 SideNav.displayName = 'SideNav'
 
-export const MiniPlayer = memo(({ colors, isTablet, onOpen, onOpenMenu }: {
+export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   colors: SquareColors
   isTablet: boolean
   onOpen: () => void
-  /** 手机形态下常驻的抽屉入口，任何页面都能打开侧栏 */
-  onOpenMenu?: () => void
 }) => {
   usePlayerTick()
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
@@ -218,11 +211,6 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen, onOpenMenu }: {
       <View style={[styles.miniProgressTrack, { backgroundColor: colors.surface3 }]}>
         <View style={[styles.miniProgressBar, { backgroundColor: colors.accent, width: `${progress * 100}%` }]} />
       </View>
-      {!isTablet && onOpenMenu
-        ? <TouchableOpacity onPress={onOpenMenu} style={styles.miniMenuBtn}>
-            <Text style={[styles.miniMenuText, { color: colors.text }]}>☰</Text>
-          </TouchableOpacity>
-        : null}
       <TouchableOpacity onPress={onOpen} style={styles.miniInfo}>
         <View style={[styles.miniCover, { backgroundColor: colors.accentSoft }]}>
           <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
@@ -277,14 +265,12 @@ const styles = StyleSheet.create({
   trackAction: { paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm },
   sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
   navItems: { flexShrink: 0 },
-  brand: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },
+  brand: { flexDirection: 'column', alignItems: 'flex-start', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
   brandMark: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   brandMarkText: { color: '#fff', fontSize: 20 },
-  brandText: { flex: 1, minWidth: 0 },
-  brandName: { fontSize: 15, fontWeight: '600' },
-  brandSub: { fontSize: 10, marginTop: 2 },
-  sideClose: { marginLeft: 'auto', padding: SPACE.sm, flexShrink: 0 },
-  sideCloseText: { fontSize: 18 },
+  brandName: { fontSize: 17, fontWeight: '700' },
+  brandSub: { fontSize: 11, marginTop: 4 },
   navGroupTitle: { fontSize: 11, paddingHorizontal: SPACE.sm, marginBottom: SPACE.sm },
   navItem: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: 11, marginBottom: 2 },
   navLabel: { fontSize: 14, marginLeft: SPACE.md },
@@ -292,8 +278,6 @@ const styles = StyleSheet.create({
   miniPlayer: { borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.lg, position: 'relative', flexShrink: 0 },
   miniProgressTrack: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
   miniProgressBar: { height: 3 },
-  miniMenuBtn: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
-  miniMenuText: { fontSize: 20 },
   miniInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   miniCover: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   miniName: { fontSize: 14, fontWeight: '500' },

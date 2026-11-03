@@ -1,7 +1,16 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Animated, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
-import { playList, playNext, playPrev, togglePlay } from '@/core/player/player'
+import { playList } from '@/core/player/player'
+import {
+  createList,
+  removeUserList,
+  updateUserList,
+  updateUserListPosition,
+  removeListMusics,
+  updateListMusics,
+  updateListMusicPosition,
+} from '@/core/list'
 import { setTheme } from '@/core/theme'
 import { updateSetting } from '@/core/common'
 import { useSettingValue } from '@/store/setting/hook'
@@ -34,69 +43,202 @@ const formatSize = (bytes: number) => {
   return `${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`
 }
 
-/** 我的歌单（收藏置顶 + 歌曲列表 + 批量缓存） */
-export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong }: {
+type ListEntry = { id: string, name?: string }
+const BUILTIN_IDS = ['default', 'love', 'temp', 'download']
+
+const ActionButton = ({ colors, label, onPress }: {
+  colors: SquareColors
+  label: string
+  onPress: () => void
+}) => (
+  <TouchableOpacity onPress={onPress} style={[styles.actionBtn, { backgroundColor: colors.surface2, borderColor: colors.line }]}>
+    <Text style={[styles.actionBtnText, { color: colors.text }]}>{label}</Text>
+  </TouchableOpacity>
+)
+
+/** 我的歌单：两级页面（歌单列表 → 歌曲列表），各自带新建/删除/改名/移动位置 */
+export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoDiscover }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
   onPlaySong: () => void
+  onGoDiscover: () => void
 }) => {
   usePlayerTick()
-  type NavList = { id: string, name?: string }
-  const lists = listState.allList as unknown as NavList[]
+  const lists = listState.allList as unknown as ListEntry[]
+  const [level, setLevel] = useState<'lists' | 'songs'>('lists')
   const [activeId, setActiveId] = useState(() => lists[0]?.id ?? 'love')
-  const songs = (getListMusicSync(activeId) ?? []).filter(m => m.source != 'local') as LX.Music.MusicInfoOnline[]
+  const [selected, setSelected] = useState<string[]>([])
+  const [editor, setEditor] = useState<{ mode: 'create' | 'rename' | 'songRename', value: string } | null>(null)
+  const songs = (getListMusicSync(activeId) ?? []) as LX.Music.MusicInfo[]
+  const activeName = lists.find(l => l.id == activeId)?.name ?? '歌单'
+
+  const clearSelection = () => setSelected([])
+  const toggleSelect = (id: string) =>
+    setSelected(s => s.includes(id) ? s.filter(x => x != id) : [...s, id])
+
+  const openList = (id: string) => { setActiveId(id); setLevel('songs'); clearSelection() }
+  const backToLists = () => { setLevel('lists'); clearSelection() }
+
+  const handleCreate = () => {
+    if (level == 'songs') {
+      onGoDiscover()
+      toast('搜索歌曲后，用歌曲菜单的「添加到」加入当前歌单')
+      return
+    }
+    setEditor({ mode: 'create', value: '' })
+  }
+
+  const handleDelete = () => {
+    if (!selected.length) { toast('请先选中要删除的项'); return }
+    void confirmDialog({ message: `确定删除选中的 ${selected.length} 项？` }).then(async ok => {
+      if (!ok) return
+      if (level == 'lists') {
+        const ids = selected.filter(id => !BUILTIN_IDS.includes(id))
+        if (!ids.length) { toast('内置歌单不能删除'); return }
+        await removeUserList(ids)
+      } else {
+        await removeListMusics(activeId, selected)
+      }
+      clearSelection()
+    })
+  }
+
+  const handleRename = () => {
+    if (selected.length != 1) { toast('请选中一项再改名'); return }
+    const id = selected[0]
+    if (level == 'lists') {
+      if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能改名'); return }
+      setEditor({ mode: 'rename', value: lists.find(l => l.id == id)?.name ?? '' })
+    } else {
+      setEditor({ mode: 'songRename', value: songs.find(m => m.id == id)?.name ?? '' })
+    }
+  }
+
+  const handleMove = (dir: -1 | 1) => {
+    if (!selected.length) { toast('请先选中要移动的项'); return }
+    const ids = level == 'lists' ? lists.map(l => l.id) : songs.map(m => m.id)
+    const idx = ids.findIndex(id => selected.includes(id))
+    const pos = Math.max(0, Math.min(ids.length - 1, idx + dir))
+    if (level == 'lists') void updateUserListPosition(pos, selected)
+    else void updateListMusicPosition(activeId, pos, selected)
+    clearSelection()
+  }
 
   const handleCacheAll = () => {
     if (!songs.length) return
-    toast(`开始缓存 ${songs.length} 首歌曲...`)
-    void batchCacheMusic(songs, {
-      listId: activeId,
-      listName: lists.find(l => l.id == activeId)?.name,
-    }).then(res => toast(`缓存完成：成功 ${res.success}，跳过 ${res.skipped}，失败 ${res.failed}`))
+    toast(`开始缓存 ${songs.length} 首...`)
+    void batchCacheMusic(songs, { listId: activeId, listName: activeName }).then(res =>
+      toast(`缓存完成：成功 ${res.success}，跳过 ${res.skipped}，失败 ${res.failed}`))
   }
 
+  const submitEditor = async() => {
+    if (!editor) return
+    const name = editor.value.trim()
+    if (!name) { setEditor(null); return }
+    if (editor.mode == 'create') {
+      await createList({ name })
+    } else if (editor.mode == 'rename') {
+      const raw = (listState.userList as unknown as ListEntry[]).find(l => l.id == selected[0])
+      if (raw) await updateUserList([{ ...raw, name } as LX.List.UserListInfo])
+    } else {
+      const music = songs.find(m => m.id == selected[0])
+      if (music) await updateListMusics([{ id: music.id, musicInfo: { ...music, name } as LX.Music.MusicInfo }])
+    }
+    setEditor(null)
+    clearSelection()
+  }
+
+  const actions = [
+    { label: level == 'lists' ? '新建' : '＋添加', onPress: handleCreate },
+    { label: '删除', onPress: handleDelete },
+    { label: '改名', onPress: handleRename },
+    { label: '↑', onPress: () => handleMove(-1) },
+    { label: '↓', onPress: () => handleMove(1) },
+    ...(level == 'songs' ? [{ label: '批量缓存', onPress: handleCacheAll }] : []),
+  ]
+
   return (
-    <View style={{ flex: 1, flexDirection: isTablet ? 'row' : 'column', padding: SPACE.lg }}>
-      <SectionShell colors={colors} style={isTablet ? { width: 220, marginRight: SPACE.lg } : { marginBottom: SPACE.md }}>
-        <SectionHeader colors={colors} title="歌单" />
-        <ScrollView horizontal={!isTablet} style={{ maxHeight: isTablet ? undefined : 64 }}>
-          {lists.map(list => (
-            <Chip
-              key={list.id}
-              colors={colors}
-              label={list.name ?? list.id}
-              active={list.id == activeId}
-              onPress={() => setActiveId(list.id)}
-            />
-          ))}
-        </ScrollView>
-      </SectionShell>
+    <View style={{ flex: 1, padding: SPACE.lg }}>
       <SectionShell colors={colors} style={{ flex: 1 }}>
         <SectionHeader
           colors={colors}
-          title={lists.find(l => l.id == activeId)?.name ?? '歌单'}
-          hint={`${songs.length} 首`}
-          right={songs.length
-            ? <TouchableOpacity onPress={handleCacheAll}><Text style={{ color: colors.accent, fontSize: 13 }}>批量缓存</Text></TouchableOpacity>
+          title={level == 'lists' ? '我的歌单' : activeName}
+          hint={level == 'lists' ? `${lists.length} 个` : `${songs.length} 首`}
+          right={level == 'songs'
+            ? <TouchableOpacity onPress={backToLists}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回歌单</Text></TouchableOpacity>
             : undefined}
         />
-        {songs.length
-          ? <ScrollView>
-              {songs.map((music, index) => (
-                <TrackRow
-                  key={`${music.source}_${music.id}_${index}`}
-                  colors={colors}
-                  index={index}
-                  musicInfo={music}
-                  isTablet={isTablet}
-                  isCompact={isCompact}
-                  onPress={() => { void playList(activeId, index); onPlaySong() }}
-                />
-              ))}
-            </ScrollView>
-          : <Empty colors={colors} text="这个歌单还没有歌曲" />}
+        <View style={styles.actionRow}>
+          {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
+        </View>
+        <ScrollView style={{ flex: 1 }}>
+          {level == 'lists'
+            ? lists.map((list, index) => {
+                const count = (getListMusicSync(list.id) ?? []).length
+                const active = selected.includes(list.id)
+                return (
+                  <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
+                    <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
+                      <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
+                      <Text style={[styles.manageName, { color: colors.text }]}>{list.name ?? list.id}</Text>
+                      <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首 · 第 {index + 1} 位</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+              })
+            : songs.length
+              ? songs.map((music, index) => {
+                  const active = selected.includes(music.id)
+                  return (
+                    <View key={`${music.source}_${music.id}_${index}`} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
+                      <TouchableOpacity onPress={() => toggleSelect(music.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
+                        <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
+                      </TouchableOpacity>
+                      <View style={{ flex: 1 }}>
+                        <TrackRow
+                          colors={colors}
+                          index={index}
+                          musicInfo={music as LX.Music.MusicInfoOnline}
+                          isTablet={isTablet}
+                          isCompact={isCompact}
+                          onPress={() => { void playList(activeId, index); onPlaySong() }}
+                        />
+                      </View>
+                    </View>
+                  )
+                })
+              : <Empty colors={colors} text="这个歌单还没有歌曲，点「＋添加」去搜索添加" />}
+        </ScrollView>
       </SectionShell>
+
+      <Modal visible={!!editor} transparent animationType="fade" onRequestClose={() => setEditor(null)}>
+        <View style={styles.modalMask}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {editor?.mode == 'create' ? '新建歌单' : '改名'}
+            </Text>
+            <TextInput
+              style={[styles.modalInput, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
+              value={editor?.value ?? ''}
+              onChangeText={v => setEditor(e => e ? { ...e, value: v } : e)}
+              placeholder="输入名称"
+              placeholderTextColor={colors.text3}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setEditor(null)} style={styles.modalBtn}>
+                <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { void submitEditor() }} style={[styles.modalBtn, { backgroundColor: colors.accent, borderRadius: RADIUS.sm }]}>
+                <Text style={{ color: '#fff', fontSize: 14 }}>确定</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 })
@@ -249,15 +391,25 @@ export const SettingView = memo(({ colors, onOpenAdvanced }: {
 })
 SettingView.displayName = 'SettingView'
 
-/** 简化正在播放页（手机：顶部吸顶 + 歌词独立滚动） */
-export const NowPlayingView = memo(({ colors, isTablet, onBack }: {
+/** 正在播放：半圆旋转唱片 + 歌词（进度/控制在底部播放条，不重复） */
+export const NowPlayingView = memo(({ colors, onBack }: {
   colors: SquareColors
-  isTablet: boolean
   onBack: () => void
 }) => {
   usePlayerTick()
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
-  const progress = Math.max(0, Math.min(1, playerState.progress.progress || 0))
+  const rotate = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const anim = Animated.loop(Animated.timing(rotate, { toValue: 1, duration: 16000, useNativeDriver: true }))
+    if (playerState.isPlay) anim.start()
+    else anim.stop()
+    return () => anim.stop()
+  }, [playerState.isPlay, rotate])
+
+  const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  const lyric = playerState.lastLyric ?? '暂无歌词'
+
   return (
     <View style={[styles.npContainer, { backgroundColor: colors.bg }]}>
       <View style={styles.npHeader}>
@@ -266,28 +418,18 @@ export const NowPlayingView = memo(({ colors, isTablet, onBack }: {
         </TouchableOpacity>
         <Text style={[styles.npHeaderTitle, { color: colors.text }]}>正在播放</Text>
       </View>
-      <View style={[styles.npCoverBig, { backgroundColor: colors.accentSoft }]}>
-        <Text style={{ color: colors.accent, fontSize: 64 }}>♪</Text>
+      <View style={styles.npHalf}>
+        <Animated.View style={[styles.npDisc, { backgroundColor: colors.accentSoft, transform: [{ rotate: spin }] }]}>
+          <View style={[styles.npDiscRing, { borderColor: colors.accent }]} />
+          <View style={[styles.npDiscCore, { backgroundColor: colors.accent }]}>
+            <Text style={{ color: '#fff', fontSize: 22 }}>♪</Text>
+          </View>
+        </Animated.View>
       </View>
       <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? '暂无播放'}</Text>
       <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
-      <View style={[styles.npProgressTrack, { backgroundColor: colors.surface3 }]}>
-        <View style={[styles.npProgressBar, { backgroundColor: colors.accent, width: `${progress * 100}%` }]} />
-      </View>
-      <Text style={[styles.hint, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr} / {playerState.progress.maxPlayTimeStr}</Text>
-      <View style={styles.npControls}>
-        <TouchableOpacity onPress={() => { void playPrev() }} style={styles.npBtn}>
-          <Icon name="prevMusic" color={colors.text} size={26} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={togglePlay} style={[styles.npPlayBtn, { backgroundColor: colors.accent }]}>
-          <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={28} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => { void playNext(true) }} style={styles.npBtn}>
-          <Icon name="nextMusic" color={colors.text} size={26} />
-        </TouchableOpacity>
-      </View>
-      <ScrollView style={styles.npLyric}>
-        <Text style={[styles.npLyricText, { color: colors.text2 }]}>{playerState.lastLyric ?? '暂无歌词'}</Text>
+      <ScrollView style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
+        <Text style={[styles.npLyricText, { color: colors.text2 }]}>{lyric}</Text>
       </ScrollView>
     </View>
   )
@@ -307,18 +449,27 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, lineHeight: 18 },
   groupRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACE.md, borderBottomWidth: 1 },
   groupName: { fontSize: 14 },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACE.md },
+  actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  actionBtnText: { fontSize: 13 },
+  manageRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
+  checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  manageName: { fontSize: 14, paddingVertical: 10 },
+  modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
+  modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
+  modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.lg },
+  modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8 },
   npContainer: { flex: 1, alignItems: 'center', paddingHorizontal: SPACE.xl },
   npHeader: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', paddingVertical: SPACE.md },
   npBack: { padding: SPACE.sm },
   npHeaderTitle: { fontSize: 15, marginLeft: SPACE.sm },
-  npCoverBig: { width: 220, height: 220, borderRadius: RADIUS.lg, alignItems: 'center', justifyContent: 'center', marginTop: SPACE.xl },
+  npHalf: { height: 170, width: '100%', alignItems: 'center', overflow: 'hidden', marginTop: SPACE.lg },
+  npDisc: { width: 340, height: 340, borderRadius: 170, alignItems: 'center', justifyContent: 'center' },
+  npDiscRing: { position: 'absolute', width: 250, height: 250, borderRadius: 125, borderWidth: 1, opacity: 0.45 },
+  npDiscCore: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' },
   npName: { fontSize: 20, fontWeight: '600', marginTop: SPACE.xl },
   npSinger: { fontSize: 13, marginTop: SPACE.sm },
-  npProgressTrack: { height: 4, borderRadius: 2, width: '90%', marginTop: SPACE.xl },
-  npProgressBar: { height: 4, borderRadius: 2 },
-  npControls: { flexDirection: 'row', alignItems: 'center', marginTop: SPACE.xl, gap: SPACE.xl },
-  npBtn: { padding: SPACE.md },
-  npPlayBtn: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
-  npLyric: { flex: 1, width: '100%', marginTop: SPACE.xl },
-  npLyricText: { fontSize: 14, textAlign: 'center', lineHeight: 24 },
+  npLyric: { flex: 1, width: '100%', marginTop: SPACE.lg },
+  npLyricText: { fontSize: 15, textAlign: 'center', lineHeight: 26 },
 })

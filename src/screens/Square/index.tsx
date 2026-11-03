@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
 import themeState from '@/store/theme/state'
-import { MiniPlayer, SideNav, type NavItem } from './components'
-import { SIDEBAR_W, useLayoutMode, useSquareColors } from './tokens'
+import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
+import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
 import { DiscoverSearchView, LeaderboardView, SonglistView, type SearchQuery } from './views/MainViews'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
 
@@ -54,13 +54,22 @@ export default ({ componentId }: { componentId: string }) => {
   const handleSelect = useCallback((id: string) => {
     setActiveView(id)
     setNowPlaying(false)
+    setDrawerOpen(false)
   }, [])
 
   const renderView = () => {
     switch (activeView) {
       case 'songlist': return <SonglistView colors={colors} />
       case 'leaderboard': return <LeaderboardView colors={colors} />
-      case 'mylist': return <MyListView colors={colors} isTablet={isTablet} isCompact={isCompact} onPlaySong={handlePlaySong} />
+      case 'mylist': return (
+        <MyListView
+          colors={colors}
+          isTablet={isTablet}
+          isCompact={isCompact}
+          onPlaySong={handlePlaySong}
+          onGoDiscover={() => { setActiveView('discover'); setNowPlaying(false) }}
+        />
+      )
       case 'cache': return <CacheView colors={colors} />
       case 'setting': return <SettingView colors={colors} onOpenAdvanced={() => setActiveView('advanced')} />
       case 'advanced': return <AdvancedView />
@@ -72,10 +81,6 @@ export default ({ componentId }: { componentId: string }) => {
           query={query}
           onHotWord={handleHotWord}
           onPlaySong={handlePlaySong}
-          searchText={searchText}
-          onChangeSearchText={setSearchText}
-          onSearch={doSearch}
-          onOpenDrawer={() => setDrawerOpen(true)}
         />
       )
     }
@@ -88,7 +93,6 @@ export default ({ componentId }: { componentId: string }) => {
       activeId={activeView}
       onSelect={handleSelect}
       isTablet={isTablet}
-      onClose={() => setDrawerOpen(false)}
     />
   )
 
@@ -98,13 +102,32 @@ export default ({ componentId }: { componentId: string }) => {
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>
+        {activeView != 'setting' && activeView != 'advanced'
+          ? (
+              <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
+                {!isTablet
+                  ? <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.headerMenu}>
+                      <Text style={[styles.headerMenuText, { color: colors.text }]}>☰</Text>
+                    </TouchableOpacity>
+                  : null}
+                <SearchBox
+                  colors={colors}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  onSubmit={doSearch}
+                  placeholder="输入歌名 / 歌手，回车搜索…"
+                />
+              </View>
+            )
+          : null}
+
         <View style={styles.content}>
           {nowPlaying
-            ? <NowPlayingView colors={colors} isTablet={isTablet} onBack={() => setNowPlaying(false)} />
+            ? <NowPlayingView colors={colors} onBack={() => setNowPlaying(false)} />
             : renderView()}
         </View>
 
-        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} onOpenMenu={() => setDrawerOpen(true)} />
+        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
       </View>
 
       {!isTablet && drawerOpen
@@ -122,6 +145,9 @@ export default ({ componentId }: { componentId: string }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row', paddingTop: StatusBar.currentHeight ?? 0 },
   main: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', width: '100%', height: 56, minHeight: 56, flexShrink: 0, paddingHorizontal: SPACE.lg, borderBottomWidth: 1 },
+  headerMenu: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm, flexShrink: 0 },
+  headerMenuText: { fontSize: 22 },
   content: { flex: 1, minHeight: 0 },
   drawerMask: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 10, elevation: 10 },
   drawerPanel: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 11, elevation: 11 },
