@@ -164,9 +164,9 @@ export const SideNav = memo(({ colors, items, activeId, onSelect, isTablet, onCl
       <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
         <Text style={styles.brandMarkText}>♪</Text>
       </View>
-      <View>
-        <Text style={[styles.brandName, { color: colors.text }]}>悦悦哄睡</Text>
-        <Text style={[styles.brandSub, { color: colors.text3 }]}>Music Square</Text>
+      <View style={styles.brandText}>
+        <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>悦悦哄睡</Text>
+        <Text style={[styles.brandSub, { color: colors.text3 }]} numberOfLines={1}>Music Square</Text>
       </View>
       {!isTablet && onClose
         ? <TouchableOpacity onPress={onClose} style={styles.sideClose}>
@@ -280,9 +280,10 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },
   brandMark: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   brandMarkText: { color: '#fff', fontSize: 20 },
+  brandText: { flex: 1, minWidth: 0 },
   brandName: { fontSize: 15, fontWeight: '600' },
   brandSub: { fontSize: 10, marginTop: 2 },
-  sideClose: { marginLeft: 'auto', padding: SPACE.sm },
+  sideClose: { marginLeft: 'auto', padding: SPACE.sm, flexShrink: 0 },
   sideCloseText: { fontSize: 18 },
   navGroupTitle: { fontSize: 11, paddingHorizontal: SPACE.sm, marginBottom: SPACE.sm },
   navItem: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: 11, marginBottom: 2 },
