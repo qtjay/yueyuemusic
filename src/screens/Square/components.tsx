@@ -71,20 +71,17 @@ export const Chip = memo(({ colors, label, active, onPress }: {
 ))
 Chip.displayName = 'Chip'
 
-export const SearchBox = memo(({ colors, value, onChangeText, onSubmit, placeholder, compact }: {
+export const SearchBox = memo(({ colors, value, onChangeText, onSubmit, placeholder }: {
   colors: SquareColors
   value: string
   onChangeText: (text: string) => void
   onSubmit: () => void
   placeholder: string
-  compact?: boolean
 }) => (
   <View style={[styles.searchBox, {
     backgroundColor: colors.surface2,
     borderColor: colors.line,
-    height: compact ? 38 : 44,
   }]}>
-    <Icon name="search-2" color={colors.text3} size={18} />
     <TextInput
       style={[styles.searchInput, { color: colors.text }]}
       value={value}
@@ -256,9 +253,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, marginTop: SPACE.md },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: RADIUS.pill, borderWidth: 1, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   chipText: { fontSize: 13 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1, paddingLeft: SPACE.md, paddingRight: 4, flex: 1 },
-  searchInput: { flex: 1, fontSize: 14, paddingHorizontal: SPACE.sm, height: '100%' },
-  searchBtn: { height: 32, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.lg, justifyContent: 'center' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1, paddingLeft: SPACE.md, paddingRight: 4, flex: 1, minWidth: 0, height: 40 },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingHorizontal: SPACE.sm, height: 36 },
+  searchBtn: { minWidth: 56, height: 30, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, alignItems: 'center', justifyContent: 'center' },
   searchBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   trackRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
   trackIndex: { width: 26, fontSize: 12, textAlign: 'center' },

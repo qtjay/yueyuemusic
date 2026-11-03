@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Icon } from '@/components/common/Icon'
 import { setApiSource } from '@/core/apiSource'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
@@ -119,7 +118,7 @@ export default ({ componentId }: { componentId: string }) => {
         <View style={[styles.topbar, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
           {!isTablet
             ? <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.menuBtn}>
-                <Icon name="menu" color={colors.text} size={22} />
+                <Text style={[styles.menuText, { color: colors.text }]}>☰</Text>
               </TouchableOpacity>
             : null}
           <SearchBox
@@ -128,7 +127,6 @@ export default ({ componentId }: { componentId: string }) => {
             onChangeText={setSearchText}
             onSubmit={doSearch}
             placeholder="输入歌名 / 歌手，回车搜索…"
-            compact={!isTablet}
           />
         </View>
         {!isTablet ? sourceChips : null}
@@ -157,8 +155,9 @@ export default ({ componentId }: { componentId: string }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   main: { flex: 1 },
-  topbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm, borderBottomWidth: 1, gap: SPACE.sm },
-  menuBtn: { padding: SPACE.sm },
+  topbar: { flexDirection: 'row', alignItems: 'center', width: '100%', height: 56, minHeight: 56, paddingHorizontal: SPACE.lg, borderBottomWidth: 1 },
+  menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
+  menuText: { fontSize: 22 },
   chipsRow: { paddingVertical: SPACE.sm, borderBottomWidth: 0 },
   content: { flex: 1 },
   drawerOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 10 },
