@@ -2,16 +2,14 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playList, playNext, playPrev, togglePlay } from '@/core/player/player'
-import { setApiSource } from '@/core/apiSource'
 import { setTheme } from '@/core/theme'
 import { updateSetting } from '@/core/common'
 import { useSettingValue } from '@/store/setting/hook'
-import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import listState from '@/store/list/state'
 import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
-import { getUserApiList, getUserLists } from '@/utils/data'
+import { getUserLists } from '@/utils/data'
 import { toast, confirmDialog } from '@/utils/tools'
 import { batchCacheMusic } from '@/core/musicCache/batch'
 import {
@@ -197,13 +195,9 @@ export const SettingView = memo(({ colors, onOpenAdvanced }: {
   colors: SquareColors
   onOpenAdvanced: () => void
 }) => {
-  const apiSource = useSettingValue('common.apiSource')
   const desktopLyric = useSettingValue('desktopLyric.enable')
   const quality = useSettingValue('player.playQuality')
-  const [apis, setApis] = useState<LX.UserApi.UserApiInfo[]>([])
   const apiModalRef = useRef<UserApiEditModalType>(null)
-
-  useEffect(() => { void getUserApiList().then(setApis) }, [])
 
   const isDark = themeState.theme.isDark
   const qualities: LX.Quality[] = ['128k', '320k', 'flac']
@@ -214,22 +208,11 @@ export const SettingView = memo(({ colors, onOpenAdvanced }: {
         <SectionHeader
           colors={colors}
           title="自定义音源"
-          hint={`当前：${settingState.setting['common.apiSource'] || '未选择'}`}
           right={<TouchableOpacity onPress={() => (apiModalRef.current as any)?.show()}><Text style={{ color: colors.accent, fontSize: 13 }}>导入 / 管理</Text></TouchableOpacity>}
         />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {apis.length
-            ? apis.map(api => (
-                <Chip
-                  key={api.id}
-                  colors={colors}
-                  label={api.name}
-                  active={api.id == apiSource}
-                  onPress={() => setApiSource(api.id)}
-                />
-              ))
-            : <Text style={[styles.hint, { color: colors.text3 }]}>还没有导入音源</Text>}
-        </View>
+        <Text style={[styles.hint, { color: colors.text3 }]}>
+          音源由应用自动选择，播放失败时自动切换，无需手动干预
+        </Text>
       </SectionShell>
 
       <SectionShell colors={colors}>

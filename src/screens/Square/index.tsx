@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native'
-import { setApiSource } from '@/core/apiSource'
+import { StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
-import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
-import { getUserApiList } from '@/utils/data'
-import { Chip, MiniPlayer, SideNav, type NavItem } from './components'
-import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
+import { MiniPlayer, SideNav, type NavItem } from './components'
+import { SIDEBAR_W, useLayoutMode, useSquareColors } from './tokens'
 import { DiscoverSearchView, LeaderboardView, SonglistView, type SearchQuery } from './views/MainViews'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
 
@@ -29,11 +26,9 @@ export default ({ componentId }: { componentId: string }) => {
   const [nowPlaying, setNowPlaying] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [query, setQuery] = useState<SearchQuery>({ text: '', seq: 0 })
-  const [apis, setApis] = useState<LX.UserApi.UserApiInfo[]>([])
 
   useEffect(() => {
     setComponentId(COMPONENT_IDS.home, componentId)
-    void getUserApiList().then(setApis)
   }, [componentId])
 
   const doSearch = useCallback(() => {
@@ -97,30 +92,12 @@ export default ({ componentId }: { componentId: string }) => {
     />
   )
 
-  const sourceChips = apis.length
-    ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ paddingHorizontal: SPACE.lg, alignItems: 'center' }}>
-          {apis.slice(0, 8).map(api => (
-            <Chip
-              key={api.id}
-              colors={colors}
-              label={api.name}
-              active={settingState.setting['common.apiSource'] == api.id}
-              onPress={() => setApiSource(api.id)}
-            />
-          ))}
-        </ScrollView>
-      )
-    : null
-
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={themeState.theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.header} />
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>
-        {!isTablet ? sourceChips : null}
-
         <View style={styles.content}>
           {nowPlaying
             ? <NowPlayingView colors={colors} isTablet={isTablet} onBack={() => setNowPlaying(false)} />
@@ -145,7 +122,6 @@ export default ({ componentId }: { componentId: string }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   main: { flex: 1 },
-  chipsRow: { height: 48, flexGrow: 0, flexShrink: 0, paddingVertical: SPACE.sm, borderBottomWidth: 0 },
   content: { flex: 1, minHeight: 0 },
   drawerMask: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 10, elevation: 10 },
   drawerPanel: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 11, elevation: 11 },
