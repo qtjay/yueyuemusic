@@ -1,13 +1,15 @@
-import { memo, useEffect, useState, type ComponentProps } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import { getList as getSongLists, getListDetailAll as getSongListDetailAll } from '@/core/songlist'
-import { getBoardsList, getListDetailAll as getBoardDetailAll } from '@/core/leaderboard'
-import { getSongListSetting, getLeaderboardSetting } from '@/utils/data'
+import SongListPage from '@/screens/Home/Views/SongList'
+import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
+import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
+import { getListDetailAll as getBoardDetailAll } from '@/core/leaderboard'
 import { overwriteListMusics } from '@/core/list'
 import { playList } from '@/core/player/player'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
+import { type SquareDetailPayload } from '@/core/squareBridge'
 import {
   AddToListModal,
   Empty,
@@ -20,31 +22,39 @@ import {
 } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
-interface BrowseEntry {
-  id: string
-  name: string
-  sub?: string
-  source: LX.OnlineSource
-}
+/** 一级：保留原有专辑网格、最新/最热等分类筛选 */
+export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
+  <View style={{ flex: 1, padding: SPACE.lg }}>
+    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
+      <SongListPage />
+    </SectionShell>
+  </View>
+))
+SonglistView.displayName = 'SonglistView'
+
+export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => (
+  <View style={{ flex: 1, padding: SPACE.lg }}>
+    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
+      <LeaderboardPage />
+    </SectionShell>
+  </View>
+))
+LeaderboardView.displayName = 'LeaderboardView'
 
 const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`
 
-/** 热门歌单 / 排行榜：两级自绘视图，顶栏形态与搜索范围由容器控制 */
-const OnlineBrowseView = memo(({ colors, isTablet, isCompact, mode, filterText, onDetailChange, backSeq, onPlaySong }: {
+/** 二级：Square 统一风格的歌曲列表（顶栏返回/内搜索由容器控制） */
+export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, filterText, onBack, onPlaySong }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
-  mode: 'songlist' | 'leaderboard'
+  payload: SquareDetailPayload
   filterText: string
-  onDetailChange: (title: string | null) => void
-  backSeq: number
+  onBack: () => void
   onPlaySong: () => void
 }) => {
-  const [entries, setEntries] = useState<BrowseEntry[]>([])
-  const [loading, setLoading] = useState(false)
-  const [detail, setDetail] = useState<{ id: string, name: string, source: LX.OnlineSource } | null>(null)
   const [songs, setSongs] = useState<LX.Music.MusicInfoOnline[]>([])
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
   const batch = useBatchSelection()
   const cachedIds = useCachedIds()
@@ -52,77 +62,24 @@ const OnlineBrowseView = memo(({ colors, isTablet, isCompact, mode, filterText, 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setSongs([])
+    batch.exit()
     void (async() => {
       try {
-        if (mode == 'songlist') {
-          const setting = await getSongListSetting()
-          const source = setting.source ?? 'kw'
-          const res = await getSongLists(source, setting.tagId ?? '', setting.sortId ?? 'new', 1)
-          if (!cancelled) setEntries(res.list.map(item => ({
-            id: item.id,
-            name: item.name,
-            sub: item.author || item.play_count,
-            source: item.source,
-          })))
-        } else {
-          const setting = await getLeaderboardSetting()
-          const source = setting.source ?? 'kw'
-          const boards = await getBoardsList(source)
-          if (!cancelled) setEntries(boards.map(board => ({
-            id: `${source}__${board.bangid}`,
-            name: board.name,
-            source,
-          })))
-        }
+        const list = payload.mode == 'songlist'
+          ? await getSongListDetailAll(payload.source, payload.id)
+          : await getBoardDetailAll(payload.id)
+        if (!cancelled) setSongs(list)
       } catch {
-        if (!cancelled) setEntries([])
+        if (!cancelled) { setSongs([]); toast('加载失败，请稍后重试') }
       } finally {
         if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [mode])
-
-  // 容器顶栏的返回按钮
-  useEffect(() => {
-    if (backSeq < 1) return
-    setDetail(null)
-    setSongs([])
-    batch.exit()
-    onDetailChange(null)
-  }, [backSeq])
-
-  const openDetail = (entry: BrowseEntry) => {
-    setDetail({ id: entry.id, name: entry.name, source: entry.source })
-    onDetailChange(entry.name)
-    setSongs([])
-    setDetailLoading(true)
-    void (async() => {
-      try {
-        const list = mode == 'songlist'
-          ? await getSongListDetailAll(entry.source, entry.id)
-          : await getBoardDetailAll(entry.id)
-        setSongs(list)
-      } catch {
-        setSongs([])
-        toast('加载失败，请稍后重试')
-      } finally {
-        setDetailLoading(false)
-      }
-    })()
-  }
-
-  const backToEntries = () => {
-    setDetail(null)
-    setSongs([])
-    batch.exit()
-    onDetailChange(null)
-  }
+  }, [payload.id, payload.mode, payload.source])
 
   const keyword = filterText.trim().toLowerCase()
-  const visibleEntries = keyword
-    ? entries.filter(e => e.name.toLowerCase().includes(keyword) || (e.sub ?? '').toLowerCase().includes(keyword))
-    : entries
   const visibleSongs = keyword
     ? songs.filter(m => m.name.toLowerCase().includes(keyword) || m.singer.toLowerCase().includes(keyword))
     : songs
@@ -136,7 +93,6 @@ const OnlineBrowseView = memo(({ colors, isTablet, isCompact, mode, filterText, 
       onPlaySong()
     })
   }
-
   const cacheAll = () => {
     const n = enqueueCacheMusic(visibleSongs)
     toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
@@ -147,64 +103,41 @@ const OnlineBrowseView = memo(({ colors, isTablet, isCompact, mode, filterText, 
       <SectionShell colors={colors} style={{ flex: 1 }}>
         <SectionHeader
           colors={colors}
-          title={detail ? detail.name : (mode == 'songlist' ? '热门歌单' : '排行榜')}
-          hint={detail ? `${visibleSongs.length} 首` : `${visibleEntries.length} 个`}
-          right={detail
-            ? <TouchableOpacity onPress={backToEntries}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回</Text></TouchableOpacity>
-            : undefined}
+          title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
+          hint={`${visibleSongs.length} 首`}
+          right={<TouchableOpacity onPress={onBack}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回</Text></TouchableOpacity>}
         />
-        {detail
-          ? <>
-              <ListActionBar
-                colors={colors}
-                batch={batch}
-                ids={ids}
-                onPlayAll={playAll}
-                onCacheAll={cacheAll}
-                getSelected={getSelected}
-                onAddToList={musics => setAddMusics(musics)}
-              />
-              {detailLoading
-                ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-                : <ScrollView style={{ flex: 1 }}>
-                    {visibleSongs.length
-                      ? visibleSongs.map((music, index) => (
-                          <TrackRow
-                            key={rowKey(music, index)}
-                            colors={colors}
-                            index={index}
-                            musicInfo={music}
-                            isTablet={isTablet}
-                            isCompact={isCompact}
-                            textSize="large"
-                            onPress={() => { handlePlay(music); onPlaySong() }}
-                            cached={cachedIds.has(music.id)}
-                            batchMode={batch.batchMode}
-                            selected={batch.selected.includes(rowKey(music, index))}
-                            onToggleSelect={() => batch.toggle(rowKey(music, index))}
-                          />
-                        ))
-                      : <Empty colors={colors} text="没有找到歌曲" />}
-                  </ScrollView>}
-            </>
-          : loading
-            ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-            : <ScrollView style={{ flex: 1 }}>
-                {visibleEntries.length
-                  ? visibleEntries.map(entry => (
-                      <TouchableOpacity key={entry.id} onPress={() => openDetail(entry)} style={[styles.entryRow, { borderBottomColor: colors.line }]}>
-                        <View style={[styles.entryCover, { backgroundColor: colors.accentSoft, borderRadius: RADIUS.sm }]}>
-                          <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15 }}>{entry.name}</Text>
-                          {entry.sub ? <Text numberOfLines={1} style={{ color: colors.text3, fontSize: 11, marginTop: 3 }}>{entry.sub}</Text> : null}
-                        </View>
-                        <Text style={{ color: colors.text3, fontSize: 16 }}>›</Text>
-                      </TouchableOpacity>
-                    ))
-                  : <Empty colors={colors} text="暂无数据，换个关键词试试" />}
-              </ScrollView>}
+        <ListActionBar
+          colors={colors}
+          batch={batch}
+          ids={ids}
+          onPlayAll={playAll}
+          onCacheAll={cacheAll}
+          getSelected={getSelected}
+          onAddToList={musics => setAddMusics(musics)}
+        />
+        {loading
+          ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
+          : <ScrollView style={{ flex: 1 }}>
+              {visibleSongs.length
+                ? visibleSongs.map((music, index) => (
+                    <TrackRow
+                      key={rowKey(music, index)}
+                      colors={colors}
+                      index={index}
+                      musicInfo={music}
+                      isTablet={isTablet}
+                      isCompact={isCompact}
+                      textSize="compact"
+                      onPress={() => { handlePlay(music); onPlaySong() }}
+                      cached={cachedIds.has(music.id)}
+                      batchMode={batch.batchMode}
+                      selected={batch.selected.includes(rowKey(music, index))}
+                      onToggleSelect={() => batch.toggle(rowKey(music, index))}
+                    />
+                  ))
+                : <Empty colors={colors} text="没有找到歌曲" />}
+            </ScrollView>}
       </SectionShell>
 
       <AddToListModal
@@ -216,19 +149,4 @@ const OnlineBrowseView = memo(({ colors, isTablet, isCompact, mode, filterText, 
     </View>
   )
 })
-OnlineBrowseView.displayName = 'OnlineBrowseView'
-
-export const SonglistView = memo((props: Omit<ComponentProps<typeof OnlineBrowseView>, 'mode'>) => (
-  <OnlineBrowseView {...props} mode="songlist" />
-))
-SonglistView.displayName = 'SonglistView'
-
-export const LeaderboardView = memo((props: Omit<ComponentProps<typeof OnlineBrowseView>, 'mode'>) => (
-  <OnlineBrowseView {...props} mode="leaderboard" />
-))
-LeaderboardView.displayName = 'LeaderboardView'
-
-const styles = {
-  entryRow: { flexDirection: 'row' as const, alignItems: 'center' as const, borderBottomWidth: 1, paddingVertical: SPACE.md, paddingHorizontal: SPACE.sm },
-  entryCover: { width: 46, height: 46, alignItems: 'center' as const, justifyContent: 'center' as const, marginRight: SPACE.md },
-}
+OnlineDetailView.displayName = 'OnlineDetailView'

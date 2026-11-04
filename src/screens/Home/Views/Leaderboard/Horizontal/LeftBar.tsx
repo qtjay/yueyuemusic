@@ -12,6 +12,7 @@ import { handleCollect, handlePlay } from '../listAction'
 import boardState, { type InitState } from '@/store/leaderboard/state'
 import { useTheme } from '@/store/theme/hook'
 import { getBoardsList } from '@/core/leaderboard'
+import { openSquareDetail } from '@/core/squareBridge'
 
 type Sources = Readonly<InitState['sources']>
 // type SourceSelectorProps = _SourceSelectorProps<Sources>
@@ -54,8 +55,11 @@ export default forwardRef<LeftBarType, LeftBarProps>(({ onChangeList }, ref) => 
     })
   }
   const onBoundChange: BoardsListProps['onBoundChange'] = (id) => {
+    const source = boundInfo.current.source
+    const name = boardState.boards[source]?.list.find(b => b.id == id)?.name ?? '排行榜'
+    if (openSquareDetail({ mode: 'leaderboard', id, source, name })) return
     boundInfo.current.id = id
-    onChangeList(boundInfo.current.source, id)
+    onChangeList(source, id)
   }
   const onPlay: BoardsListProps['onPlay'] = (id) => {
     boundInfo.current.id = id

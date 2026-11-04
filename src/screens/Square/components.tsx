@@ -125,8 +125,8 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   onPress: () => void
   onCache?: () => void
   cached?: boolean
-  /** small=搜索结果/我的歌单，large=热门歌单/排行榜 */
-  textSize?: 'small' | 'normal' | 'large'
+  /** compact=搜索/榜单/歌单详情（最紧凑），small=我的歌单，large=大字号 */
+  textSize?: 'compact' | 'small' | 'normal' | 'large'
   batchMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
@@ -136,11 +136,13 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   const quality = qualitys?.flac24bit ? '24bit' : (qualitys?.flac || qualitys?.ape) ? 'SQ' : qualitys?.['320k'] ? 'HQ' : ''
   const sourceTag = musicInfo.source || ''
   const interval = (musicInfo as any).interval as string | undefined
-  const scale = textSize == 'small'
-    ? { name: 13, sub: 10, tag: 9, height: TRACK_ROW_H - 8 }
-    : textSize == 'large'
-      ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
-      : { name: 14, sub: 11, tag: 10, height: TRACK_ROW_H }
+  const scale = textSize == 'compact'
+    ? { name: 12, sub: 9, tag: 9, height: TRACK_ROW_H - 14 }
+    : textSize == 'small'
+      ? { name: 13, sub: 10, tag: 9, height: TRACK_ROW_H - 8 }
+      : textSize == 'large'
+        ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
+        : { name: 14, sub: 11, tag: 10, height: TRACK_ROW_H }
   return (
     <TouchableOpacity
       onPress={batchMode ? onToggleSelect : onPress}
@@ -235,7 +237,8 @@ export const ListActionBar = memo(({ colors, batch, ids, onPlayAll, onCacheAll, 
             {btn('完成', batch.exit, true)}
           </>
         : <>
-            {btn('▶ 播放全部', onPlayAll)}
+            {btn('▶ 播放全部', onPlayAll, true)}
+            <View style={styles.actionSpacer} />
             {btn('缓存全部', onCacheAll)}
             {btn('批量编辑', () => batch.setBatchMode(true))}
           </>}
@@ -402,6 +405,7 @@ const styles = StyleSheet.create({
   batchCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   batchCheckText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingVertical: SPACE.sm },
+  actionSpacer: { flex: 1, minWidth: 8 },
   actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   actionBtnText: { fontSize: 13 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },

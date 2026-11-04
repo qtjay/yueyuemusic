@@ -6,7 +6,8 @@ import themeState from '@/store/theme/state'
 import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
 import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
 import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
-import { LeaderboardView, SonglistView } from './views/OnlineViews'
+import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
+import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
 
 const NAV_ITEMS: NavItem[] = [
@@ -27,13 +28,22 @@ export default ({ componentId }: { componentId: string }) => {
   const [nowPlaying, setNowPlaying] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [query, setQuery] = useState<SearchQuery>({ text: '', seq: 0 })
-  const [detailTitle, setDetailTitle] = useState<string | null>(null)
-  const [backSeq, setBackSeq] = useState(0)
+  const [browseDetail, setBrowseDetail] = useState<SquareDetailPayload | null>(null)
   const [filterText, setFilterText] = useState('')
 
   useEffect(() => {
     setComponentId(COMPONENT_IDS.home, componentId)
   }, [componentId])
+
+  // 内嵌旧页面点击歌单/榜单时，交给 Square 自绘详情
+  useEffect(() => {
+    setSquareDetailHandler(payload => {
+      setBrowseDetail(payload)
+      setFilterText('')
+      setNowPlaying(false)
+    })
+    return () => setSquareDetailHandler(null)
+  }, [])
 
   const doSearch = useCallback(() => {
     const text = searchText.trim()
@@ -59,30 +69,25 @@ export default ({ componentId }: { componentId: string }) => {
     setActiveView(id)
     setNowPlaying(false)
     setDrawerOpen(false)
-    setDetailTitle(null)
+    setBrowseDetail(null)
     setFilterText('')
   }, [])
 
-  const handleDetailChange = useCallback((title: string | null) => {
-    setDetailTitle(title)
-    setFilterText('')
-  }, [])
-
-  const scoped = activeView == 'songlist' || activeView == 'leaderboard'
-  const browseProps = {
+  const scoped = !!browseDetail
+  const detailProps = {
     colors,
     isTablet,
     isCompact,
-    filterText: scoped ? filterText : '',
-    onDetailChange: handleDetailChange,
-    backSeq,
+    payload: browseDetail!,
+    filterText,
+    onBack: () => { setBrowseDetail(null); setFilterText('') },
     onPlaySong: handlePlaySong,
   }
 
   const renderView = () => {
     switch (activeView) {
-      case 'songlist': return <SonglistView {...browseProps} />
-      case 'leaderboard': return <LeaderboardView {...browseProps} />
+      case 'songlist': return browseDetail ? <OnlineDetailView {...detailProps} /> : <SonglistView colors={colors} />
+      case 'leaderboard': return browseDetail ? <OnlineDetailView {...detailProps} /> : <LeaderboardView colors={colors} />
       case 'mylist': return (
         <MyListView
           colors={colors}
@@ -127,15 +132,14 @@ export default ({ componentId }: { componentId: string }) => {
         {activeView != 'setting' && activeView != 'advanced' && !nowPlaying
           ? (
               <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
-                {(!isTablet || detailTitle)
+                {(!isTablet || browseDetail)
                   ? <TouchableOpacity onPress={() => {
-                      if (detailTitle) {
-                        setDetailTitle(null)
+                      if (browseDetail) {
+                        setBrowseDetail(null)
                         setFilterText('')
-                        setBackSeq(n => n + 1)
                       } else setDrawerOpen(true)
                     }} style={styles.headerMenu}>
-                      <Text style={[styles.headerMenuText, { color: colors.text }]}>{detailTitle ? '‹' : '☰'}</Text>
+                      <Text style={[styles.headerMenuText, { color: colors.text }]}>{browseDetail ? '‹' : '☰'}</Text>
                     </TouchableOpacity>
                   : null}
                 <SearchBox
@@ -143,11 +147,9 @@ export default ({ componentId }: { componentId: string }) => {
                   value={scoped ? filterText : searchText}
                   onChangeText={scoped ? setFilterText : setSearchText}
                   onSubmit={scoped ? () => {} : doSearch}
-                  placeholder={activeView == 'songlist'
-                    ? '在歌单内搜索…'
-                    : activeView == 'leaderboard'
-                      ? '在排行榜内搜索…'
-                      : '输入歌名 / 歌手，回车搜索…'}
+                  placeholder={browseDetail
+                    ? (browseDetail.mode == 'songlist' ? '在歌单内搜索…' : '在排行榜内搜索…')
+                    : '输入歌名 / 歌手，回车搜索…'}
                 />
               </View>
             )

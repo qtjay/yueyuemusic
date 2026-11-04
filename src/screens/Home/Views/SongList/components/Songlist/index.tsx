@@ -4,6 +4,7 @@ import { type ListInfoItem } from '@/store/songlist/state'
 import List, { type ListProps, type ListType, type Status } from './List'
 import { navigations } from '@/navigation'
 import commonState from '@/store/common/state'
+import { openSquareDetail } from '@/core/squareBridge'
 
 export interface SonglistProps {
   onRefresh: ListProps['onRefresh']
@@ -31,6 +32,8 @@ export default forwardRef<SonglistType, SonglistProps>(({
   }))
 
   const handleOpenDetail = (item: ListInfoItem, index: number) => {
+    // Square 界面接管时用统一风格的详情视图，旧页保留分类筛选
+    if (openSquareDetail({ mode: 'songlist', id: item.id, source: item.source, name: item.name })) return
     navigations.pushSonglistDetailScreen(commonState.componentIds.home!, item)
   }
 

@@ -16,6 +16,7 @@ import settingState from '@/store/setting/state'
 import { getBoardsList } from '@/core/leaderboard'
 import { COMPONENT_IDS } from '@/config/constant'
 import { handleCollect, handlePlay } from '../listAction'
+import { openSquareDetail } from '@/core/squareBridge'
 import boardState from '@/store/leaderboard/state'
 
 
@@ -39,6 +40,7 @@ export default () => {
     })
   }
   const onBoundChange: BoardsListProps['onBoundChange'] = (id) => {
+    if (openSquareDetail({ mode: 'leaderboard', id, source: boundInfo.current.source, name: '排行榜' })) return
     boundInfo.current.id = id
     void getBoardsList(boundInfo.current.source).then(list => {
       requestAnimationFrame(() => {
