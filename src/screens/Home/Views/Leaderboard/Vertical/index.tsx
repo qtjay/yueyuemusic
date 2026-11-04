@@ -40,7 +40,9 @@ export default () => {
     })
   }
   const onBoundChange: BoardsListProps['onBoundChange'] = (id) => {
-    if (openSquareDetail({ mode: 'leaderboard', id, source: boundInfo.current.source, name: '排行榜' })) return
+    const source = boundInfo.current.source
+    const name = boardState.boards[source]?.list.find(b => b.id == id)?.name ?? '排行榜'
+    if (openSquareDetail({ mode: 'leaderboard', id, source, name })) return
     boundInfo.current.id = id
     void getBoardsList(boundInfo.current.source).then(list => {
       requestAnimationFrame(() => {
