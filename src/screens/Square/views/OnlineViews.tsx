@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
+import { Text, TouchableOpacity, View } from 'react-native'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
@@ -12,8 +12,8 @@ import { toast } from '@/utils/tools'
 import { type SquareDetailPayload } from '@/core/squareBridge'
 import {
   AddToListModal,
-  Empty,
   ListActionBar,
+  PagedSongList,
   SectionHeader,
   SectionShell,
   TrackRow,
@@ -99,49 +99,49 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
   }
 
   return (
-    <View style={{ flex: 1, padding: SPACE.lg }}>
-      <SectionShell colors={colors} style={{ flex: 1 }}>
-        <SectionHeader
-          colors={colors}
-          title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
-          hint={`${visibleSongs.length} 首`}
-          right={<TouchableOpacity onPress={onBack}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回</Text></TouchableOpacity>}
-        />
-        <ListActionBar
-          colors={colors}
-          batch={batch}
-          ids={ids}
-          songs={visibleSongs}
-          onPlayAll={playAll}
-          onCacheAll={cacheAll}
-          getSelected={getSelected}
-          onAddToList={musics => setAddMusics(musics)}
-        />
-        <FlatList
-          style={{ flex: 1 }}
-          data={loading ? [] : visibleSongs}
-          keyExtractor={(item, index) => rowKey(item, index)}
-          renderItem={({ item: music, index }) => (
-            <TrackRow
+    <View style={{ flex: 1 }}>
+      <PagedSongList
+        colors={colors}
+        songs={visibleSongs}
+        resetKey={`${payload.id}_${filterText}`}
+        expanded={batch.batchMode}
+        loading={loading}
+        header={
+          <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
+            <SectionHeader
               colors={colors}
-              index={index}
-              musicInfo={music}
-              isTablet={isTablet}
-              isCompact={isCompact}
-              textSize="small"
-              onPress={() => { handlePlay(music); onPlaySong() }}
-              cached={cachedIds.has(music.id)}
-              batchMode={batch.batchMode}
-              selected={batch.selected.includes(rowKey(music, index))}
-              onToggleSelect={() => batch.toggle(rowKey(music, index))}
+              title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
+              hint={`${visibleSongs.length} 首`}
+              right={<TouchableOpacity onPress={onBack}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回</Text></TouchableOpacity>}
             />
-          )}
-          ListEmptyComponent={loading
-            ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-            : <Empty colors={colors} text="没有找到歌曲" />}
-        />
-      </SectionShell>
-
+            <ListActionBar
+              colors={colors}
+              batch={batch}
+              ids={ids}
+              songs={visibleSongs}
+              onPlayAll={playAll}
+              onCacheAll={cacheAll}
+              getSelected={getSelected}
+              onAddToList={musics => setAddMusics(musics)}
+            />
+          </SectionShell>
+        }
+        renderRow={(music, index) => (
+          <TrackRow
+            colors={colors}
+            index={index}
+            musicInfo={music}
+            isTablet={isTablet}
+            isCompact={isCompact}
+            textSize="small"
+            onPress={() => { handlePlay(music); onPlaySong() }}
+            cached={cachedIds.has(music.id)}
+            batchMode={batch.batchMode}
+            selected={batch.selected.includes(rowKey(music, index))}
+            onToggleSelect={() => batch.toggle(rowKey(music, index))}
+          />
+        )}
+      />
       <AddToListModal
         colors={colors}
         visible={addMusics.length > 0}

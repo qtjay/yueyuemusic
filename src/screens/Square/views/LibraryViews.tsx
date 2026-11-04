@@ -41,7 +41,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { AddToListModal, Chip, Empty, ListActionBar, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
+import { AddToListModal, Chip, Empty, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -217,81 +217,92 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   ]
 
   return (
-    <View style={{ flex: 1, padding: SPACE.lg }}>
-      <SectionShell colors={colors} style={{ flex: 1 }}>
-        <SectionHeader
-          colors={colors}
-          title={level == 'lists' ? '我的歌单' : activeName}
-          hint={level == 'lists' ? `${lists.length} 个` : `${songs.length} 首`}
-          right={level == 'songs'
-            ? <TouchableOpacity onPress={backToLists}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回歌单</Text></TouchableOpacity>
-            : undefined}
-        />
-        {!batchMode
-          ? <View style={styles.actionRow}>
-              {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
-            </View>
-          : null}
-        {level == 'songs'
-          ? <ListActionBar
-              colors={colors}
-              batch={batch}
-              ids={songIds}
-              songs={songs}
-              onPlayAll={playAll}
-              onCacheAll={handleCacheAll}
-              getSelected={getSelected}
-              onAddToList={musics => setAddMusics(musics)}
-              showDelete
-              onDelete={deleteSelected}
-            />
-          : null}
-        <ScrollView style={{ flex: 1 }}>
-          {level == 'lists'
-            ? lists.map((list, index) => {
-                const count = (getListMusicSync(list.id) ?? []).length
-                const active = selected.includes(list.id)
-                return (
-                  <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
-                    <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
-                      <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
-                      <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
-                      <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
-                    </TouchableOpacity>
-                  </View>
-                )
-              })
-            : songs.length
-              ? songs.map((music, index) => {
-                  const active = selected.includes(music.id)
+    <View style={{ flex: 1 }}>
+      {level == 'lists'
+        ? <View style={{ flex: 1, padding: SPACE.lg }}>
+            <SectionShell colors={colors} style={{ flex: 1 }}>
+              <SectionHeader colors={colors} title="我的歌单" hint={`${lists.length} 个`} />
+              <View style={styles.actionRow}>
+                {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
+              </View>
+              <ScrollView style={{ flex: 1 }}>
+                {lists.map(list => {
+                  const count = (getListMusicSync(list.id) ?? []).length
+                  const active = selected.includes(list.id)
                   return (
-                    <View key={`${music.source}_${music.id}_${index}`} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
-                      <TouchableOpacity onPress={() => toggleSelect(music.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
+                    <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
+                      <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
                         <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
                       </TouchableOpacity>
-                      <View style={{ flex: 1 }}>
-                        <TrackRow
-                          colors={colors}
-                          index={index}
-                          musicInfo={music as LX.Music.MusicInfoOnline}
-                          isTablet={isTablet}
-                          isCompact={isCompact}
-                          textSize="small"
-                          onPress={batchMode
-                            ? () => toggleSelect(music.id)
-                            : () => { void playList(activeId, index); onPlaySong() }}
-                          onCache={batchMode ? undefined : () => handleCacheOne(music)}
-                          cached={cachedIds.has(music.id)}
-                        />
-                      </View>
+                      <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
+                        <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
+                        <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
+                      </TouchableOpacity>
                     </View>
                   )
-                })
-              : <Empty colors={colors} text="这个歌单还没有歌曲，点「＋添加」去搜索添加" />}
-        </ScrollView>
-      </SectionShell>
+                })}
+              </ScrollView>
+            </SectionShell>
+          </View>
+        : <PagedSongList
+            colors={colors}
+            songs={songs as LX.Music.MusicInfoOnline[]}
+            resetKey={activeId}
+            expanded={batchMode}
+            empty={<Empty colors={colors} text="这个歌单还没有歌曲，点「＋添加」去搜索添加" />}
+            header={
+              <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
+                <SectionHeader
+                  colors={colors}
+                  title={activeName}
+                  hint={`${songs.length} 首`}
+                  right={<TouchableOpacity onPress={backToLists}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回歌单</Text></TouchableOpacity>}
+                />
+                {!batchMode
+                  ? <View style={styles.actionRow}>
+                      {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
+                    </View>
+                  : null}
+                <ListActionBar
+                  colors={colors}
+                  batch={batch}
+                  ids={songIds}
+                  songs={songs}
+                  onPlayAll={playAll}
+                  onCacheAll={handleCacheAll}
+                  getSelected={getSelected}
+                  onAddToList={musics => setAddMusics(musics)}
+                  showDelete
+                  onDelete={deleteSelected}
+                />
+              </SectionShell>
+            }
+            renderRow={(music, index) => {
+              const active = selected.includes(music.id)
+              return (
+                <View style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
+                  <TouchableOpacity onPress={() => toggleSelect(music.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
+                    <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <TrackRow
+                      colors={colors}
+                      index={index}
+                      musicInfo={music}
+                      isTablet={isTablet}
+                      isCompact={isCompact}
+                      textSize="small"
+                      onPress={batchMode
+                        ? () => toggleSelect(music.id)
+                        : () => { void playList(activeId, index); onPlaySong() }}
+                      onCache={batchMode ? undefined : () => handleCacheOne(music)}
+                      cached={cachedIds.has(music.id)}
+                    />
+                  </View>
+                </View>
+              )
+            }}
+          />}
 
       <Modal visible={!!editor} transparent animationType="fade" onRequestClose={() => setEditor(null)}>
         <View style={styles.modalMask}>

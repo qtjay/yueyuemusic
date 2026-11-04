@@ -1,5 +1,5 @@
-import { memo, useEffect, useState } from 'react'
-import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
+import { ActivityIndicator, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
@@ -261,10 +261,14 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
                 </View>
                 <Text style={[styles.playAllTitle, { color: colors.text }]}>播放全部</Text>
               </TouchableOpacity>
-              <View style={styles.actionRight}>
-                {btn('缓存全部', onCacheAll)}
-                {btn('批量编辑', () => batch.setBatchMode(true))}
-              </View>
+            <View style={styles.actionRight}>
+              <TouchableOpacity onPress={onCacheAll} style={styles.iconBtn} accessibilityLabel="缓存全部">
+                <Icon name="download-2" color={colors.text2} size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => batch.setBatchMode(true)} style={styles.iconBtn} accessibilityLabel="批量编辑">
+                <Icon name="menu" color={colors.text2} size={20} />
+              </TouchableOpacity>
+            </View>
             </View>
             <Text numberOfLines={1} style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
           </View>}
@@ -306,6 +310,56 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
   )
 })
 AddToListModal.displayName = 'AddToListModal'
+
+const PAGE_SIZE = 20
+
+/** 分页歌曲列表：首屏 20 首，触底或点「加载更多」续载；批量编辑时展开全部；顶部模块随列表整体上滑滚出 */
+export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, renderRow, loading, empty }: {
+  colors: SquareColors
+  songs: LX.Music.MusicInfoOnline[]
+  resetKey: string | number
+  expanded: boolean
+  header: ReactElement | null
+  renderRow: (music: LX.Music.MusicInfoOnline, index: number) => ReactElement
+  loading?: boolean
+  empty?: ReactElement | null
+}) => {
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  const canLoadMore = useRef(true)
+  useEffect(() => { setLimit(PAGE_SIZE); canLoadMore.current = true }, [resetKey])
+  const visible = expanded ? songs : songs.slice(0, limit)
+  const hasMore = !expanded && limit < songs.length
+  // 每次续载后需一次真实滚动手势，避免首屏不满一屏时自动把全部加载完
+  const loadMore = (force = false) => {
+    if (!hasMore || (!force && !canLoadMore.current)) return
+    canLoadMore.current = false
+    setLimit(n => Math.min(n + PAGE_SIZE, songs.length))
+  }
+  return (
+    <FlatList
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: SPACE.lg }}
+      data={loading ? [] : visible}
+      keyExtractor={(item, index) => `${item.source}_${item.id}_${index}`}
+      ListHeaderComponent={header}
+      renderItem={({ item, index }) => (
+        <View style={[styles.pagedRow, { backgroundColor: colors.surface }]}>{renderRow(item, index)}</View>
+      )}
+      ListFooterComponent={hasMore
+        ? <TouchableOpacity onPress={() => loadMore(true)} style={[styles.loadMore, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+            <Text style={{ color: colors.text2, fontSize: 12 }}>加载更多（还有 {songs.length - limit} 首）</Text>
+          </TouchableOpacity>
+        : null}
+      onEndReached={() => loadMore()}
+      onMomentumScrollEnd={() => { canLoadMore.current = true }}
+      onEndReachedThreshold={0.5}
+      ListEmptyComponent={loading
+        ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
+        : empty === null ? null : (empty ?? <Empty colors={colors} text="没有找到歌曲" />)}
+    />
+  )
+})
+PagedSongList.displayName = 'PagedSongList'
 
 export interface NavItem {
   id: string
@@ -440,6 +494,9 @@ const styles = StyleSheet.create({
   playAllTitle: { fontSize: 16, fontWeight: '600' },
   playAllSub: { fontSize: 11, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
   actionRight: { flexDirection: 'row', alignItems: 'center' },
+  iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.sm },
+  pagedRow: { paddingHorizontal: SPACE.md },
+  loadMore: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.md, borderWidth: 1, borderTopWidth: 0 },
   trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
   actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   actionBtnText: { fontSize: 13 },
