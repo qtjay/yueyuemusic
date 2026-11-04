@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Animated, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { playList } from '@/core/player/player'
+import { playList, playNext, playPrev, togglePlay } from '@/core/player/player'
+import { Icon } from '@/components/common/Icon'
 import {
   createList,
   removeUserList,
@@ -463,9 +464,10 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
 CacheView.displayName = 'CacheView'
 
 /** 精简设置：音源 / 桌面歌词 / 主题 / 音质 / 高级设置入口 */
-export const SettingView = memo(({ colors, onOpenAdvanced }: {
+export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
   colors: SquareColors
   onOpenAdvanced: () => void
+  onBack: () => void
 }) => {
   const desktopLyric = useSettingValue('desktopLyric.enable')
   const quality = useSettingValue('player.playQuality')
@@ -476,6 +478,9 @@ export const SettingView = memo(({ colors, onOpenAdvanced }: {
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
+      <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+        <Text style={{ color: colors.accent, fontSize: 14 }}>‹ 返回</Text>
+      </TouchableOpacity>
       <SectionShell colors={colors}>
         <SectionHeader
           colors={colors}
@@ -538,6 +543,7 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   }, [playerState.isPlay, rotate])
 
   const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  const progress = Math.max(0, Math.min(1, playerState.progress.progress || 0))
   const lyric = playerState.lastLyric ?? '暂无歌词，换一首支持歌词的歌曲试试。'
   const picUrl = (music?.meta as Record<string, any> | undefined)?.picUrl as string | undefined
 
@@ -552,21 +558,48 @@ export const NowPlayingView = memo(({ colors, onBack }: {
               </View>}
         </Animated.View>
       </View>
-      <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.npCollapseText, { color: colors.text }]}>‹ 收起</Text>
+      <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
+        <Text style={[styles.npCollapseText, { color: colors.accent }]}>‹ 收起</Text>
       </TouchableOpacity>
       <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? '暂无播放'}</Text>
       <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
+      <View style={styles.npProgressWrap}>
+        <View style={[styles.npProgressTrack, { backgroundColor: colors.surface3 }]}>
+          <View style={[styles.npProgressBar, { backgroundColor: colors.accent, width: `${progress * 100}%` }]} />
+        </View>
+        <View style={styles.npTimeRow}>
+          <Text style={[styles.npTime, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr}</Text>
+          <Text style={[styles.npTime, { color: colors.text3 }]}>{playerState.progress.maxPlayTimeStr}</Text>
+        </View>
+      </View>
       <ScrollView style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
         <Text style={[styles.npLyricText, { color: colors.text2 }]}>{lyric}</Text>
       </ScrollView>
+      <View style={styles.npControls}>
+        <TouchableOpacity onPress={() => void playPrev()} style={styles.npCtrlBtn}>
+          <Icon name="prevMusic" color={colors.text2} size={26} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={togglePlay} style={[styles.npPlayBtn, { backgroundColor: colors.accent }]}>
+          <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={30} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => void playNext(true)} style={styles.npCtrlBtn}>
+          <Icon name="nextMusic" color={colors.text2} size={26} />
+        </TouchableOpacity>
+      </View>
     </View>
   )
 })
 NowPlayingView.displayName = 'NowPlayingView'
 
 /** 高级设置：完整旧设置页（复杂功能不占主界面，但保留可用） */
-export const AdvancedView = memo(() => <SettingPage />)
+export const AdvancedView = memo(({ colors, onBack }: { colors: SquareColors, onBack: () => void }) => (
+  <View style={{ flex: 1 }}>
+    <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.line, margin: SPACE.lg }]}>
+      <Text style={{ color: colors.accent, fontSize: 14 }}>‹ 返回设置</Text>
+    </TouchableOpacity>
+    <View style={{ flex: 1 }}><SettingPage /></View>
+  </View>
+))
 AdvancedView.displayName = 'AdvancedView'
 
 const styles = StyleSheet.create({
@@ -593,10 +626,19 @@ const styles = StyleSheet.create({
   npHalf: { width: '100%', height: 190, alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden' },
   npDisc: { width: 380, height: 380, borderRadius: 190, marginTop: -190, borderWidth: 2, overflow: 'hidden' },
   npCover: { width: '100%', height: '100%' },
-  npCollapse: { position: 'absolute', left: SPACE.lg, top: SPACE.lg, paddingHorizontal: SPACE.md, paddingVertical: 6, borderRadius: RADIUS.pill, zIndex: 2 },
+  npCollapse: { position: 'absolute', left: SPACE.lg, top: SPACE.lg, minHeight: 44, minWidth: 72, paddingHorizontal: SPACE.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.pill, zIndex: 2 },
   npCollapseText: { fontSize: 13 },
   npName: { fontSize: 22, fontWeight: '600', marginTop: SPACE.md, paddingHorizontal: SPACE.lg, textAlign: 'center' },
   npSinger: { fontSize: 13, marginTop: SPACE.sm, paddingHorizontal: SPACE.lg, textAlign: 'center' },
   npLyric: { flex: 1, width: '100%', marginTop: SPACE.xl, paddingHorizontal: SPACE.xl },
   npLyricText: { fontSize: 14, textAlign: 'center', lineHeight: 26 },
+  npProgressWrap: { width: '86%', marginTop: SPACE.lg },
+  npProgressTrack: { width: '100%', height: 4, borderRadius: 2, overflow: 'hidden' },
+  npProgressBar: { height: 4, borderRadius: 2 },
+  npTimeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: SPACE.sm },
+  npTime: { fontSize: 11 },
+  npControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: SPACE.xl, paddingTop: SPACE.sm },
+  npCtrlBtn: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
+  npPlayBtn: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginHorizontal: SPACE.xl },
+  backBtn: { minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: SPACE.lg, justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, marginBottom: SPACE.lg },
 })

@@ -30,6 +30,7 @@ export default ({ componentId }: { componentId: string }) => {
   const [query, setQuery] = useState<SearchQuery>({ text: '', seq: 0 })
   const [browseDetail, setBrowseDetail] = useState<SquareDetailPayload | null>(null)
   const [filterText, setFilterText] = useState('')
+  const [prevView, setPrevView] = useState('discover')
 
   useEffect(() => {
     setComponentId(COMPONENT_IDS.home, componentId)
@@ -66,12 +67,14 @@ export default ({ componentId }: { componentId: string }) => {
   }, [isTablet])
 
   const handleSelect = useCallback((id: string) => {
+    // 设置页无顶栏，记录来源供内嵌返回按钮使用
+    if (id == 'setting' || id == 'advanced') setPrevView(activeView)
     setActiveView(id)
     setNowPlaying(false)
     setDrawerOpen(false)
     setBrowseDetail(null)
     setFilterText('')
-  }, [])
+  }, [activeView])
 
   const scoped = !!browseDetail
   const detailProps = {
@@ -98,8 +101,14 @@ export default ({ componentId }: { componentId: string }) => {
         />
       )
       case 'cache': return <CacheView colors={colors} />
-      case 'setting': return <SettingView colors={colors} onOpenAdvanced={() => setActiveView('advanced')} />
-      case 'advanced': return <AdvancedView />
+      case 'setting': return (
+        <SettingView
+          colors={colors}
+          onOpenAdvanced={() => { setPrevView('setting'); setActiveView('advanced') }}
+          onBack={() => setActiveView(prevView == 'setting' || prevView == 'advanced' ? 'discover' : prevView)}
+        />
+      )
+      case 'advanced': return <AdvancedView colors={colors} onBack={() => setActiveView('setting')} />
       default: return (
         <DiscoverSearchView
           colors={colors}
@@ -161,7 +170,9 @@ export default ({ componentId }: { componentId: string }) => {
             : renderView()}
         </View>
 
-        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
+        {!nowPlaying
+          ? <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
+          : null}
       </View>
 
       {!isTablet && drawerOpen
