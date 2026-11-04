@@ -19,7 +19,16 @@ import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
 import { getUserLists } from '@/utils/data'
 import { toast, confirmDialog } from '@/utils/tools'
-import { batchCacheMusic } from '@/core/musicCache/batch'
+import {
+  enqueueCacheMusic,
+  getCacheQueueState,
+  subscribeCacheQueue,
+  pauseCacheQueue,
+  resumeCacheQueue,
+  removeCacheQueueItem,
+  clearFinishedCacheQueue,
+  type CacheQueueState,
+} from '@/core/musicCache/queue'
 import {
   UNGROUPED_ID,
   clearCache,
@@ -32,7 +41,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { Chip, Empty, SectionHeader, SectionShell, TrackRow, usePlayerTick } from '../components'
+import { Chip, Empty, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -44,6 +53,18 @@ const formatSize = (bytes: number) => {
 
 type ListEntry = { id: string, name?: string }
 const BUILTIN_IDS = ['default', 'love', 'temp', 'download']
+/** 内置 default 列表显示为「未播放历史」 */
+export const DEFAULT_LIST_NAME = '未播放历史'
+const displayListName = (id: string, name?: string) =>
+  id == 'default' ? DEFAULT_LIST_NAME : (name ?? id)
+
+const QUEUE_STATUS_TEXT: Record<string, string> = {
+  pending: '等待中',
+  running: '缓存中',
+  done: '已完成',
+  skipped: '已缓存',
+  failed: '失败',
+}
 
 const ActionButton = ({ colors, label, onPress }: {
   colors: SquareColors
@@ -70,7 +91,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const [selected, setSelected] = useState<string[]>([])
   const [editor, setEditor] = useState<{ mode: 'create' | 'rename' | 'songRename', value: string } | null>(null)
   const songs = (getListMusicSync(activeId) ?? []) as LX.Music.MusicInfo[]
-  const activeName = lists.find(l => l.id == activeId)?.name ?? '歌单'
+  const activeName = displayListName(activeId, lists.find(l => l.id == activeId)?.name)
+  const cachedIds = useCachedIds()
 
   const clearSelection = () => setSelected([])
   const toggleSelect = (id: string) =>
@@ -125,10 +147,13 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   }
 
   const handleCacheAll = () => {
-    if (!songs.length) return
-    toast(`开始缓存 ${songs.length} 首...`)
-    void batchCacheMusic(songs, { listId: activeId, listName: activeName }).then(res =>
-      toast(`缓存完成：成功 ${res.success}，跳过 ${res.skipped}，失败 ${res.failed}`))
+    const count = enqueueCacheMusic(songs, { listId: activeId, listName: activeName })
+    toast(count ? `已加入缓存队列 ${count} 首，可在缓存管理页查看` : '没有可缓存的歌曲')
+  }
+
+  const handleCacheOne = (music: LX.Music.MusicInfo) => {
+    const count = enqueueCacheMusic([music], { listId: activeId, listName: activeName })
+    if (count) toast('已加入缓存队列')
   }
 
   const submitEditor = async() => {
@@ -182,7 +207,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                       <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
-                      <Text style={[styles.manageName, { color: colors.text }]}>{list.name ?? list.id}</Text>
+                      <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
                       <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首 · 第 {index + 1} 位</Text>
                     </TouchableOpacity>
                   </View>
@@ -204,6 +229,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                           isTablet={isTablet}
                           isCompact={isCompact}
                           onPress={() => { void playList(activeId, index); onPlaySong() }}
+                          onCache={() => handleCacheOne(music)}
+                          cached={cachedIds.has(music.id)}
                         />
                       </View>
                     </View>
@@ -250,11 +277,12 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
   const [stats, setStats] = useState({ count: 0, totalSize: 0 })
   const [maxSize, setMaxSize] = useState('1024')
   const [draft, setDraft] = useState('1024')
-  const [nameMap, setNameMap] = useState<Record<string, string>>({ default: '试听列表', love: '我的收藏' })
+  const [nameMap, setNameMap] = useState<Record<string, string>>({ default: DEFAULT_LIST_NAME, love: '我的收藏' })
+  const [queue, setQueue] = useState<CacheQueueState>(getCacheQueueState)
 
   const load = useCallback(async() => {
     const [g, s, m, lists] = await Promise.all([getCacheGroups(), getCacheStats(), getCacheMaxSize(), getUserLists()])
-    const names: Record<string, string> = { default: '试听列表', love: '我的收藏' }
+    const names: Record<string, string> = { default: DEFAULT_LIST_NAME, love: '我的收藏' }
     for (const l of lists) names[l.id] = l.name
     setNameMap(names)
     setGroups(g)
@@ -264,6 +292,7 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
   }, [])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => subscribeCacheQueue(setQueue), [])
 
   const saveMax = () => {
     const mb = parseInt(draft)
@@ -277,6 +306,37 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
+      <SectionShell colors={colors}>
+        <SectionHeader
+          colors={colors}
+          title="正在缓存"
+          hint={`${queue.done}/${queue.total}${queue.paused ? ' · 已暂停' : ''}`}
+          right={<View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity onPress={() => queue.paused ? resumeCacheQueue() : pauseCacheQueue()}>
+              <Text style={{ color: colors.accent, fontSize: 13 }}>{queue.paused ? '继续' : '暂停'}</Text>
+            </TouchableOpacity>
+            {queue.items.length
+              ? <TouchableOpacity onPress={clearFinishedCacheQueue} style={{ marginLeft: SPACE.md }}>
+                  <Text style={{ color: colors.text3, fontSize: 13 }}>清除已完成</Text>
+                </TouchableOpacity>
+              : null}
+          </View>}
+        />
+        {queue.items.length
+          ? queue.items.map(item => (
+              <View key={item.key} style={[styles.groupRow, { borderBottomColor: colors.line }]}>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.hint, { color: colors.text3 }]}>{item.singer} · {QUEUE_STATUS_TEXT[item.status]}</Text>
+                </View>
+                <TouchableOpacity onPress={() => removeCacheQueueItem(item.key)}>
+                  <Text style={{ color: colors.danger, fontSize: 13 }}>移除</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          : <Empty colors={colors} text="暂无缓存任务" />}
+      </SectionShell>
+
       <SectionShell colors={colors}>
         <SectionHeader colors={colors} title="缓存管理" hint={`${stats.count} 首 · ${formatSize(stats.totalSize)}`} />
         <View style={styles.settingRow}>

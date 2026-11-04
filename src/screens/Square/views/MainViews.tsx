@@ -1,13 +1,10 @@
 import { memo, useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, View } from 'react-native'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
-import { batchCacheMusic } from '@/core/musicCache/batch'
-import { toast } from '@/utils/tools'
-import playerState from '@/store/player/state'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
-import { Chip, Empty, SectionHeader, SectionShell, TrackRow } from '../components'
+import { Chip, Empty, SectionHeader, SectionShell, TrackRow, useCachedIds } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 export interface SearchQuery {
@@ -17,7 +14,7 @@ export interface SearchQuery {
 
 const HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', '毛不易', '轻音乐', '摇篮曲', '白噪音']
 
-/** 发现 / 聚合搜索 / 历史播放（musicsquare 的 discover + search + history 合并） */
+/** 发现 / 聚合搜索（缓存入口统一收敛到「我的歌单」模块） */
 export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong }: {
   colors: SquareColors
   isTablet: boolean
@@ -29,6 +26,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const [results, setResults] = useState<LX.Music.MusicInfoOnline[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const cachedIds = useCachedIds()
 
   useEffect(() => {
     if (!query.text) return
@@ -45,21 +43,6 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
     return () => { cancelled = true }
   }, [query.seq, query.text])
 
-  const handleCacheAll = () => {
-    if (!results.length) return
-    toast(`开始缓存 ${results.length} 首歌曲...`)
-    void batchCacheMusic(results).then(res => {
-      toast(`缓存完成：成功 ${res.success}，跳过 ${res.skipped}，失败 ${res.failed}`)
-    })
-  }
-
-  const handleCacheOne = (musicInfo: LX.Music.MusicInfoOnline) => {
-    toast('开始缓存...')
-    void batchCacheMusic([musicInfo]).then(res => toast(res.success ? '缓存成功' : '缓存失败或已缓存'))
-  }
-
-  const playedList = playerState.playedList.slice(-10).reverse()
-
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
       <SectionShell colors={colors}>
@@ -72,14 +55,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
       {searched
         ? (
             <SectionShell colors={colors}>
-              <SectionHeader
-                colors={colors}
-                title="搜索结果"
-                hint={`${query.text} · ${results.length} 首`}
-                right={results.length
-                  ? <TouchableOpacity onPress={handleCacheAll}><Text style={{ color: colors.accent, fontSize: 13 }}>批量缓存</Text></TouchableOpacity>
-                  : undefined}
-              />
+              <SectionHeader colors={colors} title="搜索结果" hint={`${query.text} · ${results.length} 首`} />
               {loading
                 ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
                 : results.length
@@ -92,33 +68,13 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                         isTablet={isTablet}
                         isCompact={isCompact}
                         onPress={() => { handlePlay(item); onPlaySong() }}
-                        onCache={() => handleCacheOne(item)}
+                        cached={cachedIds.has(item.id)}
                       />
                     ))
                   : <Empty colors={colors} icon="🔍" text="没有找到歌曲，换个关键词试试" />}
             </SectionShell>
           )
         : null}
-
-      <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="历史播放" hint="最近 10 首" />
-        {playedList.length
-          ? playedList.map((item, index) => {
-              const music = item.musicInfo as LX.Music.MusicInfoOnline
-              return (
-                <TrackRow
-                  key={`${item.listId}_${music.id}_${index}`}
-                  colors={colors}
-                  index={index}
-                  musicInfo={music}
-                  isTablet={isTablet}
-                  isCompact={isCompact}
-                  onPress={() => { handlePlay(music); onPlaySong() }}
-                />
-              )
-            })
-          : <Empty colors={colors} text="还没有播放记录" />}
-      </SectionShell>
     </ScrollView>
   )
 })

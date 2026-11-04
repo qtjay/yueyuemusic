@@ -37,6 +37,22 @@ export const CACHE_DIR = `${Dirs.DocumentDir}/music-cache`
 let cacheIndex: Record<string, MusicCacheItem> | null = null
 let cacheDirReady = false
 
+const cacheUpdateListeners = new Set<() => void>()
+/** 缓存索引变化订阅（列表蓝色勾标记据此刷新） */
+export const subscribeCacheUpdate = (listener: () => void) => {
+  cacheUpdateListeners.add(listener)
+  return () => { cacheUpdateListeners.delete(listener) }
+}
+const emitCacheUpdate = () => {
+  for (const fn of cacheUpdateListeners) fn()
+}
+
+/** 已缓存歌曲的 id 集合 */
+export const getCachedMusicIds = async(): Promise<Set<string>> => {
+  const index = await loadIndex()
+  return new Set(Object.values(index).map(item => item.musicId))
+}
+
 const safeFileName = (str: string) => str.replace(/[\\/:*?"<>|]/g, '_')
 
 export const buildCacheKey = (musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality): string =>
@@ -199,6 +215,7 @@ export const cacheMusic = async(
   index[key] = item
   await saveIndex()
   await enforceCacheLimit()
+  emitCacheUpdate()
   return item
 }
 
@@ -213,6 +230,7 @@ export const removeCache = async(keys: string[]) => {
     delete index[key]
   }
   await saveIndex()
+  emitCacheUpdate()
 }
 
 /** 清空某个歌单分组下的全部缓存 */

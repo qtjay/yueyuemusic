@@ -2,8 +2,20 @@ import { memo, useEffect, useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
+import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import playerState from '@/store/player/state'
 import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, type SquareColors } from './tokens'
+
+/** 已缓存歌曲 id 集合：缓存写入/删除后自动刷新，供列表蓝色勾使用 */
+export const useCachedIds = () => {
+  const [ids, setIds] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
+    const refresh = () => { void getCachedMusicIds().then(setIds) }
+    refresh()
+    return subscribeCacheUpdate(refresh)
+  }, [])
+  return ids
+}
 
 /** 播放器状态轮询（500ms）：无需依赖内部事件名，旋转/后台回来都能同步 */
 export const usePlayerTick = () => {
@@ -110,9 +122,14 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   cached?: boolean
 }) => {
   const meta = musicInfo.meta as Record<string, any> | undefined
-  const quality = meta?._qualitys
-    ? Object.keys(meta._qualitys).find(k => meta._qualitys[k]) ?? ''
-    : ''
+  const qualitys = meta?._qualitys
+  // 与原生列表一致的音质标记：24bit / SQ / HQ
+  const quality = qualitys?.flac24bit
+    ? '24bit'
+    : (qualitys?.flac || qualitys?.ape)
+      ? 'SQ'
+      : qualitys?.['320k'] ? 'HQ' : ''
+  const sourceTag = musicInfo.source || ''
   const interval = (musicInfo as any).interval as string | undefined
   return (
     <TouchableOpacity
@@ -126,13 +143,21 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
       </View>
       <View style={styles.trackMain}>
         <Text numberOfLines={1} style={[styles.trackName, { color: colors.text }]}>{musicInfo.name}</Text>
-        <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3 }]}>{musicInfo.singer}</Text>
+        <View style={styles.trackSubRow}>
+          {cached
+            ? <View style={styles.cacheDot}><Text style={styles.cacheDotText}>✓</Text></View>
+            : null}
+          {quality
+            ? <Text style={[styles.miniTag, { color: colors.accent, backgroundColor: colors.accentSoft }]}>{quality}</Text>
+            : null}
+          {sourceTag
+            ? <Text style={[styles.miniTag, { color: colors.text2, backgroundColor: colors.surface3 }]}>{sourceTag}</Text>
+            : null}
+          <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3 }]}>{musicInfo.singer}</Text>
+        </View>
       </View>
       {isTablet && !isCompact
         ? <Text numberOfLines={1} style={[styles.trackAlbum, { color: colors.text2 }]}>{meta?.albumName ?? ''}</Text>
-        : null}
-      {isTablet && quality
-        ? <Text style={[styles.qualityTag, { color: colors.accent, backgroundColor: colors.accentSoft }]}>{quality}</Text>
         : null}
       {interval ? <Text style={[styles.trackTime, { color: colors.text3 }]}>{interval}</Text> : null}
       {onCache
@@ -258,9 +283,12 @@ const styles = StyleSheet.create({
   trackCoverText: { fontSize: 18 },
   trackMain: { flex: 1, minWidth: 0 },
   trackName: { fontSize: 14 },
-  trackSub: { fontSize: 11, marginTop: 3 },
+  trackSubRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  trackSub: { flex: 1, minWidth: 0, fontSize: 11 },
+  cacheDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#2E86DE', alignItems: 'center', justifyContent: 'center', marginRight: 5 },
+  cacheDotText: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  miniTag: { fontSize: 10, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginRight: 5, overflow: 'hidden' },
   trackAlbum: { width: 110, fontSize: 12, marginHorizontal: SPACE.sm },
-  qualityTag: { fontSize: 10, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: SPACE.sm, overflow: 'hidden' },
   trackTime: { width: 46, fontSize: 11, textAlign: 'right' },
   trackAction: { paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm },
   sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
