@@ -6,6 +6,7 @@ import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import { addListMusics } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
+import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
@@ -135,7 +136,13 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   const qualitys = meta?._qualitys
   const quality = qualitys?.flac24bit ? '24bit' : (qualitys?.flac || qualitys?.ape) ? 'SQ' : qualitys?.['320k'] ? 'HQ' : ''
   const sourceTag = musicInfo.source || ''
-  const picUrl = meta?.picUrl as string | undefined
+  const [cover, setCover] = useState(() => getCachedMusicCover(musicInfo))
+  useEffect(() => {
+    if (cover) return
+    let cancelled = false
+    void loadMusicCover(musicInfo).then(url => { if (!cancelled) setCover(url) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [musicInfo.id, musicInfo.source, cover])
   const interval = (musicInfo as any).interval as string | undefined
   const subText = `${musicInfo.singer ?? ''}${meta?.albumName ? ` - ${meta.albumName as string}` : ''}`
   // 四个歌曲列表统一以「我的歌单」字号为基准
@@ -153,8 +160,8 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
             <Text style={styles.batchCheckText}>{selected ? '✓' : ''}</Text>
           </TouchableOpacity>
         : <View style={[styles.trackCover, { backgroundColor: colors.accentSoft }]}>
-            {picUrl
-              ? <Image source={{ uri: picUrl }} style={styles.trackCoverImg} resizeMode="cover" />
+            {cover
+              ? <Image source={{ uri: cover }} style={styles.trackCoverImg} resizeMode="cover" />
               : <Text style={[styles.trackCoverText, { color: colors.accent }]}>{musicInfo.name?.slice(0, 1) ?? '♪'}</Text>}
           </View>}
       <View style={styles.trackMain}>

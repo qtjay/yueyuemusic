@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
@@ -117,28 +117,29 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
           getSelected={getSelected}
           onAddToList={musics => setAddMusics(musics)}
         />
-        {loading
-          ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-          : <ScrollView style={{ flex: 1 }}>
-              {visibleSongs.length
-                ? visibleSongs.map((music, index) => (
-                    <TrackRow
-                      key={rowKey(music, index)}
-                      colors={colors}
-                      index={index}
-                      musicInfo={music}
-                      isTablet={isTablet}
-                      isCompact={isCompact}
-                      textSize="small"
-                      onPress={() => { handlePlay(music); onPlaySong() }}
-                      cached={cachedIds.has(music.id)}
-                      batchMode={batch.batchMode}
-                      selected={batch.selected.includes(rowKey(music, index))}
-                      onToggleSelect={() => batch.toggle(rowKey(music, index))}
-                    />
-                  ))
-                : <Empty colors={colors} text="没有找到歌曲" />}
-            </ScrollView>}
+        <FlatList
+          style={{ flex: 1 }}
+          data={loading ? [] : visibleSongs}
+          keyExtractor={(item, index) => rowKey(item, index)}
+          renderItem={({ item: music, index }) => (
+            <TrackRow
+              colors={colors}
+              index={index}
+              musicInfo={music}
+              isTablet={isTablet}
+              isCompact={isCompact}
+              textSize="small"
+              onPress={() => { handlePlay(music); onPlaySong() }}
+              cached={cachedIds.has(music.id)}
+              batchMode={batch.batchMode}
+              selected={batch.selected.includes(rowKey(music, index))}
+              onToggleSelect={() => batch.toggle(rowKey(music, index))}
+            />
+          )}
+          ListEmptyComponent={loading
+            ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
+            : <Empty colors={colors} text="没有找到歌曲" />}
+        />
       </SectionShell>
 
       <AddToListModal

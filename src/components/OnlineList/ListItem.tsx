@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { View, TouchableOpacity, Image } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
@@ -9,6 +9,7 @@ import { useTheme } from '@/store/theme/hook'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { LIST_ITEM_HEIGHT } from '@/config/constant'
 import { createStyle, type RowInfo } from '@/utils/tools'
+import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
@@ -55,6 +56,13 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
     }
   }
   const tagInfo = useQualityTag(item)
+  const [cover, setCover] = useState(() => getCachedMusicCover(item))
+  useEffect(() => {
+    if (cover) return
+    let cancelled = false
+    void loadMusicCover(item).then(url => { if (!cancelled) setCover(url) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [item.id, item.source, cover])
 
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
 
@@ -63,8 +71,8 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
         <Text style={styles.sn} size={13} color={theme['c-300']}>{index + 1}</Text>
         <View style={styles.cover}>
-          {item.meta.picUrl
-            ? <Image source={{ uri: item.meta.picUrl }} style={styles.coverImg} resizeMode="cover" />
+          {cover
+            ? <Image source={{ uri: cover }} style={styles.coverImg} resizeMode="cover" />
             : <Text size={16} color={theme['c-350']}>♪</Text>}
         </View>
         <View style={styles.itemInfo}>

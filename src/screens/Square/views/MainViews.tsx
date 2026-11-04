@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, View } from 'react-native'
+import { ActivityIndicator, FlatList, View } from 'react-native'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { playList } from '@/core/player/player'
@@ -26,7 +26,7 @@ export interface SearchQuery {
 
 const HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', '毛不易', '轻音乐', '摇篮曲', '白噪音']
 
-/** 发现 / 聚合搜索（缓存入口统一收敛到「我的歌单」模块） */
+/** 发现 / 聚合搜索（列表虚拟化，封面只加载可见行） */
 export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong }: {
   colors: SquareColors
   isTablet: boolean
@@ -73,8 +73,24 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
     return () => { cancelled = true }
   }, [query.seq, query.text])
 
+  const renderRow = ({ item, index }: { item: LX.Music.MusicInfoOnline, index: number }) => (
+    <TrackRow
+      colors={colors}
+      index={index}
+      musicInfo={item}
+      isTablet={isTablet}
+      isCompact={isCompact}
+      textSize="small"
+      onPress={() => { handlePlay(item); onPlaySong() }}
+      cached={cachedIds.has(item.id)}
+      batchMode={batch.batchMode}
+      selected={batch.selected.includes(rowKey(item, index))}
+      onToggleSelect={() => batch.toggle(rowKey(item, index))}
+    />
+  )
+
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
+    <View style={{ flex: 1, padding: SPACE.lg }}>
       <SectionShell colors={colors}>
         <SectionHeader colors={colors} title="发现音乐" hint="热搜词" />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -84,7 +100,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
 
       {searched
         ? (
-            <SectionShell colors={colors}>
+            <SectionShell colors={colors} style={{ flex: 1 }}>
               <SectionHeader colors={colors} title="搜索结果" hint={`${query.text} · ${results.length} 首`} />
               <ListActionBar
                 colors={colors}
@@ -96,26 +112,15 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                 getSelected={getSelected}
                 onAddToList={musics => setAddMusics(musics)}
               />
-              {loading
-                ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-                : results.length
-                  ? results.map((item, index) => (
-                      <TrackRow
-                        key={rowKey(item, index)}
-                        colors={colors}
-                        index={index}
-                        musicInfo={item}
-                        isTablet={isTablet}
-                        isCompact={isCompact}
-                        textSize="small"
-                        onPress={() => { handlePlay(item); onPlaySong() }}
-                        cached={cachedIds.has(item.id)}
-                        batchMode={batch.batchMode}
-                        selected={batch.selected.includes(rowKey(item, index))}
-                        onToggleSelect={() => batch.toggle(rowKey(item, index))}
-                      />
-                    ))
+              <FlatList
+                style={{ flex: 1 }}
+                data={loading ? [] : results}
+                keyExtractor={(item, index) => rowKey(item, index)}
+                renderItem={renderRow}
+                ListEmptyComponent={loading
+                  ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
                   : <Empty colors={colors} icon="🔍" text="没有找到歌曲，换个关键词试试" />}
+              />
             </SectionShell>
           )
         : null}
@@ -125,7 +130,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
         musics={addMusics}
         onClose={() => { setAddMusics([]); batch.exit() }}
       />
-    </ScrollView>
+    </View>
   )
 })
 DiscoverSearchView.displayName = 'DiscoverSearchView'
