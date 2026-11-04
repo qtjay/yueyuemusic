@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { Icon } from '@/components/common/Icon'
+import { Animated, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { playList } from '@/core/player/player'
 import {
   createList,
@@ -391,7 +390,7 @@ export const SettingView = memo(({ colors, onOpenAdvanced }: {
 })
 SettingView.displayName = 'SettingView'
 
-/** 正在播放：半圆旋转唱片 + 歌词（进度/控制在底部播放条，不重复） */
+/** 正在播放：下半圆旋转专辑（直边贴顶）+ 歌词；顶部无工具栏、无进度/控制 */
 export const NowPlayingView = memo(({ colors, onBack }: {
   colors: SquareColors
   onBack: () => void
@@ -408,24 +407,23 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   }, [playerState.isPlay, rotate])
 
   const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
-  const lyric = playerState.lastLyric ?? '暂无歌词'
+  const lyric = playerState.lastLyric ?? '暂无歌词，换一首支持歌词的歌曲试试。'
+  const picUrl = (music?.meta as Record<string, any> | undefined)?.picUrl as string | undefined
 
   return (
     <View style={[styles.npContainer, { backgroundColor: colors.bg }]}>
-      <View style={styles.npHeader}>
-        <TouchableOpacity onPress={onBack} style={styles.npBack}>
-          <Icon name="back-2" color={colors.text} size={22} />
-        </TouchableOpacity>
-        <Text style={[styles.npHeaderTitle, { color: colors.text }]}>正在播放</Text>
-      </View>
       <View style={styles.npHalf}>
-        <Animated.View style={[styles.npDisc, { backgroundColor: colors.accentSoft, transform: [{ rotate: spin }] }]}>
-          <View style={[styles.npDiscRing, { borderColor: colors.accent }]} />
-          <View style={[styles.npDiscCore, { backgroundColor: colors.accent }]}>
-            <Text style={{ color: '#fff', fontSize: 22 }}>♪</Text>
-          </View>
+        <Animated.View style={[styles.npDisc, { backgroundColor: colors.accentSoft, borderColor: colors.surface, transform: [{ rotate: spin }] }]}>
+          {picUrl
+            ? <Image source={{ uri: picUrl }} style={styles.npCover} resizeMode="cover" />
+            : <View style={[styles.npCover, { alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: colors.accent, fontSize: 64 }}>♪</Text>
+              </View>}
         </Animated.View>
       </View>
+      <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.npCollapseText, { color: colors.text }]}>‹ 收起</Text>
+      </TouchableOpacity>
       <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? '暂无播放'}</Text>
       <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
       <ScrollView style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
@@ -460,16 +458,14 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
   modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.lg },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8 },
-  npContainer: { flex: 1, alignItems: 'center', paddingHorizontal: SPACE.xl },
-  npHeader: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', paddingVertical: SPACE.md },
-  npBack: { padding: SPACE.sm },
-  npHeaderTitle: { fontSize: 15, marginLeft: SPACE.sm },
-  npHalf: { height: 170, width: '100%', alignItems: 'center', overflow: 'hidden', marginTop: SPACE.lg },
-  npDisc: { width: 340, height: 340, borderRadius: 170, alignItems: 'center', justifyContent: 'center' },
-  npDiscRing: { position: 'absolute', width: 250, height: 250, borderRadius: 125, borderWidth: 1, opacity: 0.45 },
-  npDiscCore: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' },
-  npName: { fontSize: 20, fontWeight: '600', marginTop: SPACE.xl },
-  npSinger: { fontSize: 13, marginTop: SPACE.sm },
-  npLyric: { flex: 1, width: '100%', marginTop: SPACE.lg },
-  npLyricText: { fontSize: 15, textAlign: 'center', lineHeight: 26 },
+  npContainer: { flex: 1, alignItems: 'center' },
+  npHalf: { width: '100%', height: 190, alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden' },
+  npDisc: { width: 380, height: 380, borderRadius: 190, marginTop: -190, borderWidth: 2, overflow: 'hidden' },
+  npCover: { width: '100%', height: '100%' },
+  npCollapse: { position: 'absolute', left: SPACE.lg, top: SPACE.lg, paddingHorizontal: SPACE.md, paddingVertical: 6, borderRadius: RADIUS.pill, zIndex: 2 },
+  npCollapseText: { fontSize: 13 },
+  npName: { fontSize: 22, fontWeight: '600', marginTop: SPACE.md, paddingHorizontal: SPACE.lg, textAlign: 'center' },
+  npSinger: { fontSize: 13, marginTop: SPACE.sm, paddingHorizontal: SPACE.lg, textAlign: 'center' },
+  npLyric: { flex: 1, width: '100%', marginTop: SPACE.xl, paddingHorizontal: SPACE.xl },
+  npLyricText: { fontSize: 14, textAlign: 'center', lineHeight: 26 },
 })

@@ -102,7 +102,7 @@ export default ({ componentId }: { componentId: string }) => {
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>
-        {activeView != 'setting' && activeView != 'advanced'
+        {activeView != 'setting' && activeView != 'advanced' && !nowPlaying
           ? (
               <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
                 {!isTablet
