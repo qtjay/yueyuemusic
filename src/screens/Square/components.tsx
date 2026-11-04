@@ -253,20 +253,20 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }) : null}
             {btn('完成', batch.exit, true)}
           </>
-        : <View style={styles.actionHeader}>
-            <TouchableOpacity onPress={onPlayAll} style={styles.playAllHit}>
-              <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}>
-                <Text style={styles.playAllIconText}>▶</Text>
-              </View>
-              <View>
+        : <View style={styles.actionBlock}>
+            <View style={styles.actionHeader}>
+              <TouchableOpacity onPress={onPlayAll} style={styles.playAllHit}>
+                <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}>
+                  <Text style={styles.playAllIconText}>▶</Text>
+                </View>
                 <Text style={[styles.playAllTitle, { color: colors.text }]}>播放全部</Text>
-                <Text style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
+              </TouchableOpacity>
+              <View style={styles.actionRight}>
+                {btn('缓存全部', onCacheAll)}
+                {btn('批量编辑', () => batch.setBatchMode(true))}
               </View>
-            </TouchableOpacity>
-            <View style={styles.actionRight}>
-              {btn('缓存全部', onCacheAll)}
-              {btn('批量编辑', () => batch.setBatchMode(true))}
             </View>
+            <Text numberOfLines={1} style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
           </View>}
     </View>
   )
@@ -432,12 +432,13 @@ const styles = StyleSheet.create({
   batchCheckText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingVertical: SPACE.sm },
   actionSpacer: { flex: 1, minWidth: 8 },
-  actionHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingVertical: SPACE.sm },
-  playAllHit: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  actionBlock: { width: '100%' },
+  actionHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingTop: SPACE.sm },
+  playAllHit: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
   playAllIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   playAllIconText: { color: '#fff', fontSize: 15 },
   playAllTitle: { fontSize: 16, fontWeight: '600' },
-  playAllSub: { fontSize: 11, marginTop: 2 },
+  playAllSub: { fontSize: 11, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
   actionRight: { flexDirection: 'row', alignItems: 'center' },
   trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
   actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
