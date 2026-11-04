@@ -111,6 +111,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
           colors={colors}
           batch={batch}
           ids={ids}
+          songs={visibleSongs}
           onPlayAll={playAll}
           onCacheAll={cacheAll}
           getSelected={getSelected}
@@ -128,7 +129,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
                       musicInfo={music}
                       isTablet={isTablet}
                       isCompact={isCompact}
-                      textSize="compact"
+                      textSize="small"
                       onPress={() => { handlePlay(music); onPlaySong() }}
                       cached={cachedIds.has(music.id)}
                       batchMode={batch.batchMode}

@@ -1,5 +1,5 @@
 import { memo, useRef } from 'react'
-import { View, TouchableOpacity } from 'react-native'
+import { View, TouchableOpacity, Image } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import Badge, { type BadgeType } from '@/components/common/Badge'
@@ -62,8 +62,13 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
     <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)' }}>
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
         <Text style={styles.sn} size={13} color={theme['c-300']}>{index + 1}</Text>
+        <View style={styles.cover}>
+          {item.meta.picUrl
+            ? <Image source={{ uri: item.meta.picUrl }} style={styles.coverImg} resizeMode="cover" />
+            : <Text size={16} color={theme['c-350']}>♪</Text>}
+        </View>
         <View style={styles.itemInfo}>
-          <Text numberOfLines={1}>{item.name}</Text>
+          <Text numberOfLines={1} size={13}>{item.name}</Text>
           <View style={styles.listItemSingle}>
             { tagInfo.type ? <Badge type={tagInfo.type}>{tagInfo.text}</Badge> : null }
             { showSource ? <Badge type="tertiary">{item.source}</Badge> : null }
@@ -114,6 +119,20 @@ const styles = createStyle({
     // backgroundColor: 'rgba(0,0,0,0.2)',
     paddingLeft: 3,
     paddingRight: 3,
+  },
+  cover: {
+    width: 42,
+    height: 42,
+    borderRadius: 4,
+    backgroundColor: 'rgba(128,128,128,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  coverImg: {
+    width: 42,
+    height: 42,
+    borderRadius: 4,
   },
   itemInfo: {
     flexGrow: 1,

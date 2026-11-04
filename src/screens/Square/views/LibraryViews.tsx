@@ -237,6 +237,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
               colors={colors}
               batch={batch}
               ids={songIds}
+              songs={songs}
               onPlayAll={playAll}
               onCacheAll={handleCacheAll}
               getSelected={getSelected}

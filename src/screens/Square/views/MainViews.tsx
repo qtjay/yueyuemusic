@@ -90,6 +90,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                 colors={colors}
                 batch={batch}
                 ids={ids}
+                songs={results}
                 onPlayAll={playAll}
                 onCacheAll={cacheAll}
                 getSelected={getSelected}
@@ -106,7 +107,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                         musicInfo={item}
                         isTablet={isTablet}
                         isCompact={isCompact}
-                        textSize="compact"
+                        textSize="small"
                         onPress={() => { handlePlay(item); onPlaySong() }}
                         cached={cachedIds.has(item.id)}
                         batchMode={batch.batchMode}

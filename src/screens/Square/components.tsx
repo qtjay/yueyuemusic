@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
@@ -135,14 +135,13 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   const qualitys = meta?._qualitys
   const quality = qualitys?.flac24bit ? '24bit' : (qualitys?.flac || qualitys?.ape) ? 'SQ' : qualitys?.['320k'] ? 'HQ' : ''
   const sourceTag = musicInfo.source || ''
+  const picUrl = meta?.picUrl as string | undefined
   const interval = (musicInfo as any).interval as string | undefined
-  const scale = textSize == 'compact'
-    ? { name: 12, sub: 9, tag: 9, height: TRACK_ROW_H - 14 }
-    : textSize == 'small'
-      ? { name: 13, sub: 10, tag: 9, height: TRACK_ROW_H - 8 }
-      : textSize == 'large'
-        ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
-        : { name: 14, sub: 11, tag: 10, height: TRACK_ROW_H }
+  const subText = `${musicInfo.singer ?? ''}${meta?.albumName ? ` - ${meta.albumName as string}` : ''}`
+  // 四个歌曲列表统一以「我的歌单」字号为基准
+  const scale = textSize == 'large'
+    ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
+    : { name: 13, sub: 10, tag: 9, height: TRACK_ROW_H - 8 }
   return (
     <TouchableOpacity
       onPress={batchMode ? onToggleSelect : onPress}
@@ -153,10 +152,11 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
         ? <TouchableOpacity onPress={onToggleSelect} style={[styles.batchCheck, { borderColor: colors.accent, backgroundColor: selected ? colors.accent : 'transparent' }]}>
             <Text style={styles.batchCheckText}>{selected ? '✓' : ''}</Text>
           </TouchableOpacity>
-        : <Text style={[styles.trackIndex, { color: colors.text3 }]}>{index + 1}</Text>}
-      <View style={[styles.trackCover, { backgroundColor: colors.accentSoft }]}>
-        <Text style={[styles.trackCoverText, { color: colors.accent }]}>{musicInfo.name?.slice(0, 1) ?? '♪'}</Text>
-      </View>
+        : <View style={[styles.trackCover, { backgroundColor: colors.accentSoft }]}>
+            {picUrl
+              ? <Image source={{ uri: picUrl }} style={styles.trackCoverImg} resizeMode="cover" />
+              : <Text style={[styles.trackCoverText, { color: colors.accent }]}>{musicInfo.name?.slice(0, 1) ?? '♪'}</Text>}
+          </View>}
       <View style={styles.trackMain}>
         <Text numberOfLines={1} style={[styles.trackName, { color: colors.text, fontSize: scale.name }]}>{musicInfo.name}</Text>
         <View style={styles.trackSubRow}>
@@ -169,7 +169,7 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
           {sourceTag
             ? <Text style={[styles.miniTag, { color: colors.text2, backgroundColor: colors.surface3, fontSize: scale.tag }]}>{sourceTag}</Text>
             : null}
-          <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3, fontSize: scale.sub }]}>{musicInfo.singer}</Text>
+          <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3, fontSize: scale.sub }]}>{subText}</Text>
         </View>
       </View>
       {isTablet && !isCompact
@@ -200,10 +200,11 @@ export const useBatchSelection = () => {
 type BatchState = ReturnType<typeof useBatchSelection>
 
 /** 网易云式列表操作条：播放全部 / 缓存全部 / 批量编辑 → 全选 / 反选 / 加入歌单 / 缓存所选 */
-export const ListActionBar = memo(({ colors, batch, ids, onPlayAll, onCacheAll, getSelected, onAddToList, showDelete, onDelete }: {
+export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, onCacheAll, getSelected, onAddToList, showDelete, onDelete }: {
   colors: SquareColors
   batch: BatchState
   ids: string[]
+  songs?: LX.Music.MusicInfo[]
   onPlayAll: () => void
   onCacheAll: () => void
   getSelected: () => LX.Music.MusicInfo[]
@@ -212,6 +213,15 @@ export const ListActionBar = memo(({ colors, batch, ids, onPlayAll, onCacheAll, 
   onDelete?: () => void
 }) => {
   const count = batch.selected.length
+  const totalSec = songs.reduce((acc, m) => {
+    const raw = (m as unknown as { interval?: string }).interval
+    if (!raw || !raw.includes(':')) return acc
+    const [mm, ss] = raw.split(':').map(Number)
+    return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
+  }, 0)
+  const durationText = totalSec >= 3600
+    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
+    : `${Math.floor(totalSec / 60)} 分钟`
   const btn = (label: string, onPress: () => void, accent = false) => (
     <TouchableOpacity key={label} onPress={onPress} style={[styles.actionBtn, { backgroundColor: accent ? colors.accent : colors.surface2, borderColor: colors.line }]}>
       <Text style={[styles.actionBtnText, { color: accent ? '#fff' : colors.text }]}>{label}</Text>
@@ -236,12 +246,21 @@ export const ListActionBar = memo(({ colors, batch, ids, onPlayAll, onCacheAll, 
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }) : null}
             {btn('完成', batch.exit, true)}
           </>
-        : <>
-            {btn('▶ 播放全部', onPlayAll, true)}
-            <View style={styles.actionSpacer} />
-            {btn('缓存全部', onCacheAll)}
-            {btn('批量编辑', () => batch.setBatchMode(true))}
-          </>}
+        : <View style={styles.actionHeader}>
+            <TouchableOpacity onPress={onPlayAll} style={styles.playAllHit}>
+              <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}>
+                <Text style={styles.playAllIconText}>▶</Text>
+              </View>
+              <View>
+                <Text style={[styles.playAllTitle, { color: colors.text }]}>播放全部</Text>
+                <Text style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.actionRight}>
+              {btn('缓存全部', onCacheAll)}
+              {btn('批量编辑', () => batch.setBatchMode(true))}
+            </View>
+          </View>}
     </View>
   )
 })
@@ -406,6 +425,14 @@ const styles = StyleSheet.create({
   batchCheckText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingVertical: SPACE.sm },
   actionSpacer: { flex: 1, minWidth: 8 },
+  actionHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingVertical: SPACE.sm },
+  playAllHit: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  playAllIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  playAllIconText: { color: '#fff', fontSize: 15 },
+  playAllTitle: { fontSize: 16, fontWeight: '600' },
+  playAllSub: { fontSize: 11, marginTop: 2 },
+  actionRight: { flexDirection: 'row', alignItems: 'center' },
+  trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
   actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   actionBtnText: { fontSize: 13 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
