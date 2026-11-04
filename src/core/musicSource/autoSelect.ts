@@ -34,7 +34,7 @@ const pickRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length
  * 随机切换到一个音源（跳过已标记失败的；init 失败自动再随机换，最多试 4 个）
  * @returns 成功启用的音源 id，全部失败返回 null
  */
-export const switchToRandomSource = async(): Promise<string | null> => {
+export const switchToRandomSource = async(silent = false): Promise<string | null> => {
   const list = await getUserApiList()
   if (!list.length) return null
 
@@ -52,7 +52,7 @@ export const switchToRandomSource = async(): Promise<string | null> => {
 
     setApiSource(api.id)
     if (await waitApiInit()) {
-      toast(`已启用音源：${api.name}`)
+      if (!silent) toast(`已启用音源：${api.name}`)
       return api.id
     }
     failedSources.add(api.id)
@@ -66,5 +66,5 @@ export const switchToRandomSource = async(): Promise<string | null> => {
 export const autoSelectAvailableSource = async(): Promise<string | null> => {
   const list = await getUserApiList()
   if (!list.length) return null
-  return switchToRandomSource()
+  return switchToRandomSource(true)
 }

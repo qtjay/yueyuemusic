@@ -5,10 +5,14 @@ import BackgroundTimer from 'react-native-background-timer'
 import { fetchData } from './request'
 import { getUserApiList } from '@/utils/data'
 import { initBuiltinMusicSources } from '@/core/musicSource'
+import { markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
+import { state as userApiState } from '@/store/userApi'
 import { confirmDialog, openUrl, tipDialog } from '@/utils/tools'
 
 
 export default async(setting: LX.AppSetting) => {
+  // 防止初始化失败时并发/递归触发自动换源
+  let autoSwitching = false
   const userApiRequestMap = new Map<string, { resolve: (value: ResponseParams['result']) => void, reject: (error: Error) => void, timeout: number }>()
   const scriptRequestMap = new Map<string, { request: Promise<any>, abort: () => void }>()
 
@@ -180,17 +184,20 @@ export default async(setting: LX.AppSetting) => {
         global.state_event.apiSourceUpdated(settingState.setting['common.apiSource'])
       }
     } else {
-      if (errorMessage) {
-        void tipDialog({
-          message: `${global.i18n.t('user_api__init_failed_alert', { name: info.name })}\n${errorMessage}`,
-          // selection: true,
-          btnText: global.i18n.t('ok'),
-        })
+      // 初始化失败：静默标记失败源、结束本次 init promise，并自动切到其他可用源（不弹窗）
+      markSourceFailed(info.id)
+      if (!global.lx.apiInitPromise[1]) global.lx.apiInitPromise[2](false)
+      if (!autoSwitching) {
+        autoSwitching = true
+        void switchToRandomSource(true).finally(() => { autoSwitching = false })
       }
     }
     if (!global.lx.apiInitPromise[1]) global.lx.apiInitPromise[2](status)
   }
   const showUpdateAlert = ({ name, log, updateUrl }: UpdateInfoParams) => {
+    // 默认不打扰：仅当用户手动勾选「允许显示更新弹窗」时才提示
+    const current = userApiState.list.find(api => api.id === settingState.setting['common.apiSource'])
+    if (current && !current.allowShowUpdateAlert) return
     if (updateUrl) {
       void confirmDialog({
         message: `${global.i18n.t('user_api_update_alert', { name })}\n${log}`,
