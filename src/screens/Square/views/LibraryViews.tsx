@@ -41,7 +41,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { Chip, Empty, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
+import { AddToListModal, Chip, Empty, ListActionBar, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -90,6 +90,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const [activeId, setActiveId] = useState(() => lists[0]?.id ?? 'love')
   const [selected, setSelected] = useState<string[]>([])
   const [editor, setEditor] = useState<{ mode: 'create' | 'rename' | 'songRename', value: string } | null>(null)
+  const [batchMode, setBatchMode] = useState(false)
+  const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
   const songs = (getListMusicSync(activeId) ?? []) as LX.Music.MusicInfo[]
   const activeName = displayListName(activeId, lists.find(l => l.id == activeId)?.name)
   const cachedIds = useCachedIds()
@@ -138,11 +140,19 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
 
   const handleMove = (dir: -1 | 1) => {
     if (!selected.length) { toast('请先选中要移动的项'); return }
-    const ids = level == 'lists' ? lists.map(l => l.id) : songs.map(m => m.id)
-    const idx = ids.findIndex(id => selected.includes(id))
-    const pos = Math.max(0, Math.min(ids.length - 1, idx + dir))
-    if (level == 'lists') void updateUserListPosition(pos, selected)
-    else void updateListMusicPosition(activeId, pos, selected)
+    if (level == 'lists') {
+      // 位置 API 作用于「用户歌单」数组，索引必须基于 userList，不能用含内置列表的 allList
+      const userIds = (listState.userList as unknown as ListEntry[]).map(l => l.id)
+      const idx = userIds.findIndex(id => selected.includes(id))
+      if (idx < 0) { toast('内置歌单不能调整顺序'); return }
+      const pos = Math.max(0, Math.min(userIds.length - 1, idx + dir))
+      void updateUserListPosition(pos, selected)
+    } else {
+      const ids = songs.map(m => m.id)
+      const idx = ids.findIndex(id => selected.includes(id))
+      const pos = Math.max(0, Math.min(ids.length - 1, idx + dir))
+      void updateListMusicPosition(activeId, pos, selected)
+    }
     clearSelection()
   }
 
@@ -154,6 +164,31 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const handleCacheOne = (music: LX.Music.MusicInfo) => {
     const count = enqueueCacheMusic([music], { listId: activeId, listName: activeName })
     if (count) toast('已加入缓存队列')
+  }
+
+  // 批量编辑复用管理态的选中集合，避免两套复选状态
+  const songIds = songs.map(m => m.id)
+  const batch = {
+    batchMode,
+    setBatchMode,
+    selected,
+    toggle: toggleSelect,
+    selectAll: (ids: string[]) => setSelected(ids),
+    invert: (ids: string[]) => setSelected(s => ids.filter(id => !s.includes(id))),
+    exit: () => { setBatchMode(false); clearSelection() },
+  }
+  const getSelected = () => songs.filter(m => selected.includes(m.id))
+  const playAll = () => {
+    if (!songs.length) return
+    void playList(activeId, 0)
+    onPlaySong()
+  }
+  const deleteSelected = () => {
+    if (!selected.length) { toast('请先选中歌曲'); return }
+    void confirmDialog({ message: `从歌单移除选中的 ${selected.length} 首？` }).then(ok => {
+      if (ok) void removeListMusics(activeId, selected)
+      batch.exit()
+    })
   }
 
   const submitEditor = async() => {
@@ -179,7 +214,6 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     { label: '改名', onPress: handleRename },
     { label: '↑', onPress: () => handleMove(-1) },
     { label: '↓', onPress: () => handleMove(1) },
-    ...(level == 'songs' ? [{ label: '批量缓存', onPress: handleCacheAll }] : []),
   ]
 
   return (
@@ -193,9 +227,24 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
             ? <TouchableOpacity onPress={backToLists}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回歌单</Text></TouchableOpacity>
             : undefined}
         />
-        <View style={styles.actionRow}>
-          {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
-        </View>
+        {!batchMode
+          ? <View style={styles.actionRow}>
+              {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
+            </View>
+          : null}
+        {level == 'songs'
+          ? <ListActionBar
+              colors={colors}
+              batch={batch}
+              ids={songIds}
+              onPlayAll={playAll}
+              onCacheAll={handleCacheAll}
+              getSelected={getSelected}
+              onAddToList={musics => setAddMusics(musics)}
+              showDelete
+              onDelete={deleteSelected}
+            />
+          : null}
         <ScrollView style={{ flex: 1 }}>
           {level == 'lists'
             ? lists.map((list, index) => {
@@ -208,7 +257,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
                       <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
-                      <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首 · 第 {index + 1} 位</Text>
+                      <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
                     </TouchableOpacity>
                   </View>
                 )
@@ -228,8 +277,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                           musicInfo={music as LX.Music.MusicInfoOnline}
                           isTablet={isTablet}
                           isCompact={isCompact}
-                          onPress={() => { void playList(activeId, index); onPlaySong() }}
-                          onCache={() => handleCacheOne(music)}
+                          textSize="small"
+                          onPress={batchMode
+                            ? () => toggleSelect(music.id)
+                            : () => { void playList(activeId, index); onPlaySong() }}
+                          onCache={batchMode ? undefined : () => handleCacheOne(music)}
                           cached={cachedIds.has(music.id)}
                         />
                       </View>
@@ -265,6 +317,13 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
           </View>
         </View>
       </Modal>
+
+      <AddToListModal
+        colors={colors}
+        visible={addMusics.length > 0}
+        musics={addMusics}
+        onClose={() => { setAddMusics([]); batch.exit() }}
+      />
     </View>
   )
 })
@@ -512,7 +571,7 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 13 },
   manageRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
   checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
-  manageName: { fontSize: 14, paddingVertical: 10 },
+  manageName: { fontSize: 13, paddingVertical: 10 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },

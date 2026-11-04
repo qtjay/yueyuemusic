@@ -1,8 +1,13 @@
 import { memo, useEffect, useState } from 'react'
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
+import { addListMusics } from '@/core/list'
+import { enqueueCacheMusic } from '@/core/musicCache/queue'
+import { toast } from '@/utils/tools'
+import listState from '@/store/list/state'
+import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
 import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, type SquareColors } from './tokens'
 
@@ -111,7 +116,7 @@ export const SearchBox = memo(({ colors, value, onChangeText, onSubmit, placehol
 ))
 SearchBox.displayName = 'SearchBox'
 
-export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, onPress, onCache, cached }: {
+export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, onPress, onCache, cached, textSize = 'normal', batchMode, selected, onToggleSelect }: {
   colors: SquareColors
   index: number
   musicInfo: LX.Music.MusicInfoOnline
@@ -120,40 +125,49 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   onPress: () => void
   onCache?: () => void
   cached?: boolean
+  /** small=搜索结果/我的歌单，large=热门歌单/排行榜 */
+  textSize?: 'small' | 'normal' | 'large'
+  batchMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }) => {
   const meta = musicInfo.meta as Record<string, any> | undefined
   const qualitys = meta?._qualitys
-  // 与原生列表一致的音质标记：24bit / SQ / HQ
-  const quality = qualitys?.flac24bit
-    ? '24bit'
-    : (qualitys?.flac || qualitys?.ape)
-      ? 'SQ'
-      : qualitys?.['320k'] ? 'HQ' : ''
+  const quality = qualitys?.flac24bit ? '24bit' : (qualitys?.flac || qualitys?.ape) ? 'SQ' : qualitys?.['320k'] ? 'HQ' : ''
   const sourceTag = musicInfo.source || ''
   const interval = (musicInfo as any).interval as string | undefined
+  const scale = textSize == 'small'
+    ? { name: 13, sub: 10, tag: 9, height: TRACK_ROW_H - 8 }
+    : textSize == 'large'
+      ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
+      : { name: 14, sub: 11, tag: 10, height: TRACK_ROW_H }
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={batchMode ? onToggleSelect : onPress}
       activeOpacity={0.7}
-      style={[styles.trackRow, { height: TRACK_ROW_H, borderBottomColor: colors.line }]}
+      style={[styles.trackRow, { height: scale.height, borderBottomColor: colors.line }]}
     >
-      <Text style={[styles.trackIndex, { color: colors.text3 }]}>{index + 1}</Text>
+      {batchMode
+        ? <TouchableOpacity onPress={onToggleSelect} style={[styles.batchCheck, { borderColor: colors.accent, backgroundColor: selected ? colors.accent : 'transparent' }]}>
+            <Text style={styles.batchCheckText}>{selected ? '✓' : ''}</Text>
+          </TouchableOpacity>
+        : <Text style={[styles.trackIndex, { color: colors.text3 }]}>{index + 1}</Text>}
       <View style={[styles.trackCover, { backgroundColor: colors.accentSoft }]}>
         <Text style={[styles.trackCoverText, { color: colors.accent }]}>{musicInfo.name?.slice(0, 1) ?? '♪'}</Text>
       </View>
       <View style={styles.trackMain}>
-        <Text numberOfLines={1} style={[styles.trackName, { color: colors.text }]}>{musicInfo.name}</Text>
+        <Text numberOfLines={1} style={[styles.trackName, { color: colors.text, fontSize: scale.name }]}>{musicInfo.name}</Text>
         <View style={styles.trackSubRow}>
           {cached
             ? <View style={styles.cacheDot}><Text style={styles.cacheDotText}>✓</Text></View>
             : null}
           {quality
-            ? <Text style={[styles.miniTag, { color: colors.accent, backgroundColor: colors.accentSoft }]}>{quality}</Text>
+            ? <Text style={[styles.miniTag, { color: colors.accent, backgroundColor: colors.accentSoft, fontSize: scale.tag }]}>{quality}</Text>
             : null}
           {sourceTag
-            ? <Text style={[styles.miniTag, { color: colors.text2, backgroundColor: colors.surface3 }]}>{sourceTag}</Text>
+            ? <Text style={[styles.miniTag, { color: colors.text2, backgroundColor: colors.surface3, fontSize: scale.tag }]}>{sourceTag}</Text>
             : null}
-          <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3 }]}>{musicInfo.singer}</Text>
+          <Text numberOfLines={1} style={[styles.trackSub, { color: colors.text3, fontSize: scale.sub }]}>{musicInfo.singer}</Text>
         </View>
       </View>
       {isTablet && !isCompact
@@ -169,6 +183,100 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
   )
 })
 TrackRow.displayName = 'TrackRow'
+
+/** 批量编辑状态（全选/反选/退出） */
+export const useBatchSelection = () => {
+  const [batchMode, setBatchMode] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  const toggle = (id: string) => setSelected(s => s.includes(id) ? s.filter(x => x != id) : [...s, id])
+  const selectAll = (ids: string[]) => setSelected(ids)
+  const invert = (ids: string[]) => setSelected(s => ids.filter(id => !s.includes(id)))
+  const exit = () => { setBatchMode(false); setSelected([]) }
+  return { batchMode, setBatchMode, selected, toggle, selectAll, invert, exit }
+}
+
+type BatchState = ReturnType<typeof useBatchSelection>
+
+/** 网易云式列表操作条：播放全部 / 缓存全部 / 批量编辑 → 全选 / 反选 / 加入歌单 / 缓存所选 */
+export const ListActionBar = memo(({ colors, batch, ids, onPlayAll, onCacheAll, getSelected, onAddToList, showDelete, onDelete }: {
+  colors: SquareColors
+  batch: BatchState
+  ids: string[]
+  onPlayAll: () => void
+  onCacheAll: () => void
+  getSelected: () => LX.Music.MusicInfo[]
+  onAddToList: (musics: LX.Music.MusicInfo[]) => void
+  showDelete?: boolean
+  onDelete?: () => void
+}) => {
+  const count = batch.selected.length
+  const btn = (label: string, onPress: () => void, accent = false) => (
+    <TouchableOpacity key={label} onPress={onPress} style={[styles.actionBtn, { backgroundColor: accent ? colors.accent : colors.surface2, borderColor: colors.line }]}>
+      <Text style={[styles.actionBtnText, { color: accent ? '#fff' : colors.text }]}>{label}</Text>
+    </TouchableOpacity>
+  )
+  return (
+    <View style={styles.actionRow}>
+      {batch.batchMode
+        ? <>
+            {btn('全选', () => batch.selectAll(ids))}
+            {btn('反选', () => batch.invert(ids))}
+            {btn(`加入歌单 (${count})`, () => {
+              if (!count) return toast('请先选择歌曲')
+              onAddToList(getSelected())
+            })}
+            {btn(`缓存所选 (${count})`, () => {
+              if (!count) return toast('请先选择歌曲')
+              const n = enqueueCacheMusic(getSelected())
+              toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+              batch.exit()
+            })}
+            {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }) : null}
+            {btn('完成', batch.exit, true)}
+          </>
+        : <>
+            {btn('▶ 播放全部', onPlayAll)}
+            {btn('缓存全部', onCacheAll)}
+            {btn('批量编辑', () => batch.setBatchMode(true))}
+          </>}
+    </View>
+  )
+})
+ListActionBar.displayName = 'ListActionBar'
+
+export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
+  colors: SquareColors
+  visible: boolean
+  musics: LX.Music.MusicInfo[]
+  onClose: () => void
+}) => {
+  const lists = (listState.allList as unknown as Array<{ id: string, name?: string }>).filter(l => l.id != 'temp')
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalMask}>
+        <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>加入到歌单</Text>
+          <ScrollView style={{ maxHeight: 320 }}>
+            {lists.map(l => (
+              <TouchableOpacity key={l.id} onPress={() => {
+                void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
+                  toast(`已加入「${l.name ?? l.id}」`)
+                  onClose()
+                })
+              }} style={styles.modalItem}>
+                <Text style={{ color: colors.text, fontSize: 14 }}>{l.name ?? l.id}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity onPress={onClose} style={styles.modalBtn}>
+            <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )
+})
+AddToListModal.displayName = 'AddToListModal'
 
 export interface NavItem {
   id: string
@@ -291,6 +399,16 @@ const styles = StyleSheet.create({
   trackAlbum: { width: 110, fontSize: 12, marginHorizontal: SPACE.sm },
   trackTime: { width: 46, fontSize: 11, textAlign: 'right' },
   trackAction: { paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm },
+  batchCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
+  batchCheckText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingVertical: SPACE.sm },
+  actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  actionBtnText: { fontSize: 13 },
+  modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
+  modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
+  modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
+  modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8, alignSelf: 'flex-end' },
   sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
   navItems: { flexShrink: 0 },
   brand: { flexDirection: 'column', alignItems: 'flex-start', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },

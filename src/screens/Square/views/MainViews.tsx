@@ -2,10 +2,22 @@ import { memo, useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, View } from 'react-native'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
-import SongListPage from '@/screens/Home/Views/SongList'
-import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
-import { Chip, Empty, SectionHeader, SectionShell, TrackRow, useCachedIds } from '../components'
-import { RADIUS, SPACE, type SquareColors } from '../tokens'
+import { playList } from '@/core/player/player'
+import { overwriteListMusics } from '@/core/list'
+import { enqueueCacheMusic } from '@/core/musicCache/queue'
+import { toast } from '@/utils/tools'
+import {
+  AddToListModal,
+  Chip,
+  Empty,
+  ListActionBar,
+  SectionHeader,
+  SectionShell,
+  TrackRow,
+  useBatchSelection,
+  useCachedIds,
+} from '../components'
+import { SPACE, type SquareColors } from '../tokens'
 
 export interface SearchQuery {
   text: string
@@ -26,7 +38,25 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const [results, setResults] = useState<LX.Music.MusicInfoOnline[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
   const cachedIds = useCachedIds()
+  const batch = useBatchSelection()
+  const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`
+  const ids = results.map(rowKey)
+  const getSelected = () => results.filter((m, i) => batch.selected.includes(rowKey(m, i)))
+
+  const playAll = () => {
+    if (!results.length) return
+    void overwriteListMusics('temp', results).then(() => {
+      void playList('temp', 0)
+      onPlaySong()
+    })
+  }
+
+  const cacheAll = () => {
+    const n = enqueueCacheMusic(results)
+    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+  }
 
   useEffect(() => {
     if (!query.text) return
@@ -56,46 +86,45 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
         ? (
             <SectionShell colors={colors}>
               <SectionHeader colors={colors} title="搜索结果" hint={`${query.text} · ${results.length} 首`} />
+              <ListActionBar
+                colors={colors}
+                batch={batch}
+                ids={ids}
+                onPlayAll={playAll}
+                onCacheAll={cacheAll}
+                getSelected={getSelected}
+                onAddToList={musics => setAddMusics(musics)}
+              />
               {loading
                 ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
                 : results.length
                   ? results.map((item, index) => (
                       <TrackRow
-                        key={`${item.source}_${item.id}_${index}`}
+                        key={rowKey(item, index)}
                         colors={colors}
                         index={index}
                         musicInfo={item}
                         isTablet={isTablet}
                         isCompact={isCompact}
+                        textSize="small"
                         onPress={() => { handlePlay(item); onPlaySong() }}
                         cached={cachedIds.has(item.id)}
+                        batchMode={batch.batchMode}
+                        selected={batch.selected.includes(rowKey(item, index))}
+                        onToggleSelect={() => batch.toggle(rowKey(item, index))}
                       />
                     ))
                   : <Empty colors={colors} icon="🔍" text="没有找到歌曲，换个关键词试试" />}
             </SectionShell>
           )
         : null}
+      <AddToListModal
+        colors={colors}
+        visible={addMusics.length > 0}
+        musics={addMusics}
+        onClose={() => { setAddMusics([]); batch.exit() }}
+      />
     </ScrollView>
   )
 })
 DiscoverSearchView.displayName = 'DiscoverSearchView'
-
-/** 热门歌单：复用原有歌单页能力，外层套 musicsquare 卡片 */
-export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
-  <View style={{ flex: 1, padding: SPACE.lg }}>
-    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
-      <SongListPage />
-    </SectionShell>
-  </View>
-))
-SonglistView.displayName = 'SonglistView'
-
-/** 排行榜：复用原有榜单页能力 */
-export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => (
-  <View style={{ flex: 1, padding: SPACE.lg }}>
-    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
-      <LeaderboardPage />
-    </SectionShell>
-  </View>
-))
-LeaderboardView.displayName = 'LeaderboardView'

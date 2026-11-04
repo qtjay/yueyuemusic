@@ -5,7 +5,8 @@ import { COMPONENT_IDS } from '@/config/constant'
 import themeState from '@/store/theme/state'
 import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
 import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
-import { DiscoverSearchView, LeaderboardView, SonglistView, type SearchQuery } from './views/MainViews'
+import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
+import { LeaderboardView, SonglistView } from './views/OnlineViews'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
 
 const NAV_ITEMS: NavItem[] = [
@@ -26,6 +27,9 @@ export default ({ componentId }: { componentId: string }) => {
   const [nowPlaying, setNowPlaying] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [query, setQuery] = useState<SearchQuery>({ text: '', seq: 0 })
+  const [detailTitle, setDetailTitle] = useState<string | null>(null)
+  const [backSeq, setBackSeq] = useState(0)
+  const [filterText, setFilterText] = useState('')
 
   useEffect(() => {
     setComponentId(COMPONENT_IDS.home, componentId)
@@ -55,12 +59,30 @@ export default ({ componentId }: { componentId: string }) => {
     setActiveView(id)
     setNowPlaying(false)
     setDrawerOpen(false)
+    setDetailTitle(null)
+    setFilterText('')
   }, [])
+
+  const handleDetailChange = useCallback((title: string | null) => {
+    setDetailTitle(title)
+    setFilterText('')
+  }, [])
+
+  const scoped = activeView == 'songlist' || activeView == 'leaderboard'
+  const browseProps = {
+    colors,
+    isTablet,
+    isCompact,
+    filterText: scoped ? filterText : '',
+    onDetailChange: handleDetailChange,
+    backSeq,
+    onPlaySong: handlePlaySong,
+  }
 
   const renderView = () => {
     switch (activeView) {
-      case 'songlist': return <SonglistView colors={colors} />
-      case 'leaderboard': return <LeaderboardView colors={colors} />
+      case 'songlist': return <SonglistView {...browseProps} />
+      case 'leaderboard': return <LeaderboardView {...browseProps} />
       case 'mylist': return (
         <MyListView
           colors={colors}
@@ -105,17 +127,27 @@ export default ({ componentId }: { componentId: string }) => {
         {activeView != 'setting' && activeView != 'advanced' && !nowPlaying
           ? (
               <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
-                {!isTablet
-                  ? <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.headerMenu}>
-                      <Text style={[styles.headerMenuText, { color: colors.text }]}>☰</Text>
+                {(!isTablet || detailTitle)
+                  ? <TouchableOpacity onPress={() => {
+                      if (detailTitle) {
+                        setDetailTitle(null)
+                        setFilterText('')
+                        setBackSeq(n => n + 1)
+                      } else setDrawerOpen(true)
+                    }} style={styles.headerMenu}>
+                      <Text style={[styles.headerMenuText, { color: colors.text }]}>{detailTitle ? '‹' : '☰'}</Text>
                     </TouchableOpacity>
                   : null}
                 <SearchBox
                   colors={colors}
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  onSubmit={doSearch}
-                  placeholder="输入歌名 / 歌手，回车搜索…"
+                  value={scoped ? filterText : searchText}
+                  onChangeText={scoped ? setFilterText : setSearchText}
+                  onSubmit={scoped ? () => {} : doSearch}
+                  placeholder={activeView == 'songlist'
+                    ? '在歌单内搜索…'
+                    : activeView == 'leaderboard'
+                      ? '在排行榜内搜索…'
+                      : '输入歌名 / 歌手，回车搜索…'}
                 />
               </View>
             )
