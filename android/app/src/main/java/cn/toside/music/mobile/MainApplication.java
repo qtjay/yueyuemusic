@@ -14,6 +14,8 @@ import cn.toside.music.mobile.crypto.CryptoPackage;
 import cn.toside.music.mobile.lyric.LyricPackage;
 import cn.toside.music.mobile.userApi.UserApiPackage;
 import cn.toside.music.mobile.utils.UtilsPackage;
+import cn.toside.music.mobile.umeng.UmengModule;
+import cn.toside.music.mobile.umeng.UmengPackage;
 
 public class MainApplication extends NavigationApplication {
 
@@ -35,6 +37,7 @@ public class MainApplication extends NavigationApplication {
           packages.add(new UtilsPackage());
           packages.add(new CryptoPackage());
           packages.add(new UserApiPackage());
+          packages.add(new UmengPackage());
           return packages;
         }
 
@@ -62,6 +65,9 @@ public class MainApplication extends NavigationApplication {
   @Override
   public void onCreate() {
     super.onCreate();
+
+    // 友盟合规：预初始化不采集信息、不上报；用户同意协议后才由 RN 调用正式初始化
+    UmengModule.preInit(this);
 
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

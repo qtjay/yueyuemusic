@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
 import themeState from '@/store/theme/state'
 import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
 import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
+import { trackPageEnd, trackPageStart } from '@/utils/umeng'
 import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
 import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
 import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
@@ -31,6 +32,20 @@ export default ({ componentId }: { componentId: string }) => {
   const [browseDetail, setBrowseDetail] = useState<SquareDetailPayload | null>(null)
   const [filterText, setFilterText] = useState('')
   const [prevView, setPrevView] = useState('discover')
+  const currentPageRef = useRef(activeView)
+
+  // 友盟页面统计：RN 单 Activity，按 Square 视图手动埋点
+  useEffect(() => {
+    trackPageStart(`square_${currentPageRef.current}`)
+    return () => { trackPageEnd(`square_${currentPageRef.current}`) }
+  }, [])
+  useEffect(() => {
+    const prev = currentPageRef.current
+    if (prev == activeView) return
+    trackPageEnd(`square_${prev}`)
+    trackPageStart(`square_${activeView}`)
+    currentPageRef.current = activeView
+  }, [activeView])
 
   useEffect(() => {
     setComponentId(COMPONENT_IDS.home, componentId)

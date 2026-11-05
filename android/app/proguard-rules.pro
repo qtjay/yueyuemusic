@@ -15,6 +15,19 @@
 
 -keep class org.jaudiotagger.tag.** { *; }
 
+# 友盟移动统计 SDK
+-keep class com.umeng.** { *; }
+-keep class org.repackage.** { *; }
+-keep class com.uyumao.** { *; }
+-keepclassmembers class * {
+   public <init> (org.json.JSONObject);
+}
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+-keep public class cn.toside.music.mobile.R$* { public static final int *; }
+
 
 -keep public class com.dylanvann.fastimage.* {*;}
 -keep public class com.dylanvann.fastimage.** {*;}

@@ -16,11 +16,14 @@ import settingState from '@/store/setting/state'
 import { bootLog } from '@/utils/bootLog'
 import { cheatTip } from '@/utils/tools'
 import { autoSelectAvailableSource } from '@/core/musicSource/autoSelect'
+import { grantUmengPrivacy } from '@/utils/umeng'
 
 let isFirstPush = true
 const handlePushedHomeScreen = async() => {
   await cheatTip()
   if (settingState.setting['common.isAgreePact']) {
+    // 老用户升级后原生侧没有授权标记，这里幂等补一次正式初始化
+    void grantUmengPrivacy()
     if (isFirstPush) {
       isFirstPush = false
       // void checkUpdate()

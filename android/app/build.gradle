@@ -200,6 +200,12 @@ android {
     }
 }
 
+// 友盟移动统计 SDK 托管在 Maven Central
+repositories {
+    mavenCentral()
+    maven { url 'https://repo1.maven.org/maven2/' }
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -207,6 +213,10 @@ dependencies {
     // implementation "androidx.javascriptengine:javascriptengine:1.0.0-alpha07"
     // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation 'wang.harlon.quickjs:wrapper-android:2.4.0'
+
+    // 友盟移动统计（固定版本，避免动态版本号导致 CI 解析超时）
+    implementation 'com.umeng.umsdk:common:9.8.8'
+    implementation 'com.umeng.umsdk:asms:1.8.6'
 
   if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

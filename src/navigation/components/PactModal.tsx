@@ -13,6 +13,7 @@ import { updateSetting } from '@/core/common'
 import { checkUpdate } from '@/core/version'
 import { initDeeplink } from '@/core/init/deeplink'
 import settingState from '@/store/setting/state'
+import { grantUmengPrivacy } from '@/utils/umeng'
 
 const Content = () => {
   const theme = useTheme()
@@ -59,6 +60,9 @@ const Content = () => {
         <Text selectable style={styles.text} >8.1 本项目仅用于对技术可行性的探索及研究，不接受任何商业（包括但不限于广告等）合作及捐赠。{'\n'}</Text>
         <Text selectable style={styles.bold} >九、接受协议{'\n'}</Text>
         <Text selectable style={styles.text} >9.1 若你使用了本项目，将代表你接受本协议。{'\n'}</Text>
+        <Text selectable style={styles.bold} >十、第三方 SDK 与个人信息{'\n'}</Text>
+        <Text selectable style={styles.text} >10.1 为统计应用使用情况、改进产品体验，本应用集成「友盟移动统计 SDK」（运营方：友盟同欣（北京）科技有限公司），服务类型为数据统计分析。该 SDK 可能收集设备标识信息（Android ID / OAID / GUID / GAID）及网络信息，用于生成脱敏的终端用户设备标识并提供统计分析服务。{'\n'}</Text>
+        <Text selectable style={styles.text} >10.2 我们仅在你同意本协议之后才会初始化该 SDK；在你同意之前不会采集设备信息或向友盟上报数据。友盟隐私权政策：<Text onPress={() => { void openUrl('https://www.umeng.com/page/policy') }} style={textLinkStyle}>https://www.umeng.com/page/policy</Text>{'\n'}</Text>
         <Text selectable style={styles.text} >* 若协议更新，恕不另行通知，可到开源地址查看。</Text>
       </ScrollView>
     </View>
@@ -78,7 +82,11 @@ const Footer = ({ componentId }: { componentId: string }) => {
 
   const handleConfirm = () => {
     let _isAgreePact = isAgreePact
-    if (!isAgreePact) updateSetting({ 'common.isAgreePact': true })
+    if (!isAgreePact) {
+      updateSetting({ 'common.isAgreePact': true })
+      // 合规：用户同意协议之后才正式初始化友盟统计 SDK
+      void grantUmengPrivacy()
+    }
     void Navigation.dismissOverlay(componentId)
     if (!_isAgreePact) {
       setTimeout(() => {
