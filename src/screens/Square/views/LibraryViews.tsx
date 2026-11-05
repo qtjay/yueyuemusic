@@ -382,16 +382,16 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
           colors={colors}
           title="正在缓存"
           hint={`${queue.done}/${queue.total}${queue.paused ? ' · 已暂停' : ''}`}
-          right={<View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity onPress={() => queue.paused ? resumeCacheQueue() : pauseCacheQueue()}>
-              <Text style={{ color: colors.accent, fontSize: 13 }}>{queue.paused ? '继续' : '暂停'}</Text>
-            </TouchableOpacity>
-            {queue.items.length
-              ? <TouchableOpacity onPress={clearFinishedCacheQueue} style={{ marginLeft: SPACE.md }}>
+          right={queue.items.length
+            ? <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity onPress={() => queue.paused ? resumeCacheQueue() : pauseCacheQueue()} style={styles.textBtn}>
+                  <Text style={{ color: colors.accent, fontSize: 13 }}>{queue.paused ? '继续' : '暂停'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={clearFinishedCacheQueue} style={styles.textBtn}>
                   <Text style={{ color: colors.text3, fontSize: 13 }}>清除已完成</Text>
                 </TouchableOpacity>
-              : null}
-          </View>}
+              </View>
+            : undefined}
         />
         {queue.items.length
           ? queue.items.map(item => (
@@ -400,12 +400,14 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
                   <Text numberOfLines={1} style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
                   <Text style={[styles.hint, { color: colors.text3 }]}>{item.singer} · {QUEUE_STATUS_TEXT[item.status]}</Text>
                 </View>
-                <TouchableOpacity onPress={() => removeCacheQueueItem(item.key)}>
+                <TouchableOpacity onPress={() => removeCacheQueueItem(item.key)} style={styles.textBtn}>
                   <Text style={{ color: colors.danger, fontSize: 13 }}>移除</Text>
                 </TouchableOpacity>
               </View>
             ))
-          : <Empty colors={colors} text="暂无缓存任务" />}
+          : <View style={styles.cacheEmpty}>
+              <Text style={{ color: colors.text3, fontSize: 13 }}>暂无缓存任务</Text>
+            </View>}
       </SectionShell>
 
       <SectionShell colors={colors}>
@@ -437,7 +439,7 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
           title="按歌单管理"
           right={<TouchableOpacity onPress={() => {
             void confirmDialog({ message: '清空全部缓存歌曲？' }).then(ok => { if (ok) void clearCache().then(load) })
-          }}><Text style={{ color: colors.danger, fontSize: 13 }}>清空全部</Text></TouchableOpacity>}
+          }} style={styles.textBtn}><Text style={{ color: colors.danger, fontSize: 13 }}>清空全部</Text></TouchableOpacity>}
         />
         {groups.length
           ? groups.map(group => (
@@ -484,7 +486,7 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
         <SectionHeader
           colors={colors}
           title="自定义音源"
-          right={<TouchableOpacity onPress={() => (apiModalRef.current as any)?.show()}><Text style={{ color: colors.accent, fontSize: 13 }}>导入 / 管理</Text></TouchableOpacity>}
+          right={<TouchableOpacity onPress={() => (apiModalRef.current as any)?.show()} style={styles.textBtn}><Text style={{ color: colors.accent, fontSize: 13 }}>导入 / 管理</Text></TouchableOpacity>}
         />
         <Text style={[styles.hint, { color: colors.text3 }]}>
           音源由应用自动选择，播放失败时自动切换，无需手动干预
@@ -584,13 +586,15 @@ const styles = StyleSheet.create({
   settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACE.sm },
   settingLabel: { flex: 1, fontSize: 14 },
   input: { borderWidth: 1, borderRadius: RADIUS.sm, width: 90, paddingHorizontal: SPACE.sm, paddingVertical: 5, fontSize: 14, marginRight: SPACE.sm },
-  smallBtn: { borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 7 },
+  smallBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 7 },
   smallBtnText: { color: '#fff', fontSize: 13 },
+  textBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: SPACE.sm },
+  cacheEmpty: { height: 72, alignItems: 'center', justifyContent: 'center' },
   hint: { fontSize: 12, lineHeight: 18 },
   groupRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACE.md, borderBottomWidth: 1 },
   groupName: { fontSize: 14 },
-  actionRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACE.md },
-  actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACE.sm },
+  actionBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   actionBtnText: { fontSize: 13 },
   manageRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
   checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },

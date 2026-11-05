@@ -5,7 +5,6 @@ import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
-import { BorderWidths } from '@/theme'
 
 export interface SortTabProps {
   onSortChange: (id: string) => void
@@ -44,8 +43,8 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
     <ScrollView ref={scrollViewRef} style={styles.container} keyboardShouldPersistTaps={'always'} horizontal>
       {
         sorts.map(s => (
-          <TouchableOpacity style={styles.button} onPress={() => { handleSortChange(s.id) }} key={s.id}>
-            <Text style={{ ...styles.buttonText, borderBottomColor: activeId == s.id ? theme['c-primary-background-active'] : 'transparent' }} color={activeId == s.id ? theme['c-primary-font-active'] : theme['c-font']}>{s.label}</Text>
+          <TouchableOpacity style={[styles.button, activeId == s.id ? { backgroundColor: theme['c-primary-background-active'] } : null]} onPress={() => { handleSortChange(s.id) }} key={s.id}>
+            <Text style={styles.buttonText} color={activeId == s.id ? theme['c-primary-font-active'] : theme['c-font']}>{s.label}</Text>
           </TouchableOpacity>
         ))
       }
@@ -62,20 +61,19 @@ const styles = createStyle({
     // paddingRight: 5,
   },
   button: {
-    // height: 38,
-    // lineHeight: 38,
     justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 36,
     paddingLeft: 14,
     paddingRight: 14,
-    // width: 80,
-    // backgroundColor: 'rgba(0,0,0,0.1)',
+    marginRight: 6,
+    marginVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(128,128,128,0.08)',
   },
   buttonText: {
-    // height: 38,
-    // lineHeight: 38,
     textAlign: 'center',
     paddingHorizontal: 2,
     paddingVertical: 3,
-    borderBottomWidth: BorderWidths.normal3,
   },
 })

@@ -37,6 +37,9 @@ const styles = createStyle({
     paddingLeft: 15,
     paddingRight: 15,
     justifyContent: 'center',
+    marginHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(128,128,128,0.08)',
   },
   sourceMenu: {
     // height: 38,

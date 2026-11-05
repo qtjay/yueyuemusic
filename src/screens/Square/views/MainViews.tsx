@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { playList } from '@/core/player/player'
@@ -101,6 +101,14 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                     getSelected={getSelected}
                     onAddToList={musics => setAddMusics(musics)}
                   />
+                </SectionShell>
+              : null}
+            {!searched
+              ? <SectionShell colors={colors}>
+                  <SectionHeader colors={colors} title="开始聆听" hint="使用提示" />
+                  <Text style={{ color: colors.text2, fontSize: 13, lineHeight: 22 }}>
+                    点上方热搜词，或在搜索框输入歌名 / 歌手开始找歌。结果可播放全部、缓存全部、加入歌单；底部播放条可拖动进度、收藏到我的收藏。
+                  </Text>
                 </SectionShell>
               : null}
           </View>

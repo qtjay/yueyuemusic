@@ -146,7 +146,7 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
     return () => { cancelled = true }
   }, [musicInfo.id, musicInfo.source, cover])
   const interval = (musicInfo as any).interval as string | undefined
-  const subText = `${musicInfo.singer ?? ''}${meta?.albumName ? ` - ${meta.albumName as string}` : ''}`
+  const subText = `${musicInfo.singer ?? ''}${!isCompact && meta?.albumName ? ` - ${meta.albumName as string}` : ''}`
   // 四个歌曲列表统一以「我的歌单」字号为基准
   const scale = textSize == 'large'
     ? { name: 16, sub: 12, tag: 11, height: TRACK_ROW_H + 8 }
@@ -173,7 +173,7 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
             ? <View style={styles.cacheDot}><Text style={styles.cacheDotText}>✓</Text></View>
             : null}
           {quality
-            ? <Text style={[styles.miniTag, { color: colors.accent, backgroundColor: colors.accentSoft, fontSize: scale.tag }]}>{quality}</Text>
+            ? <Text style={[styles.miniTag, { color: colors.accentStrong, backgroundColor: colors.accentSoft, fontSize: scale.tag }]}>{quality}</Text>
             : null}
           {sourceTag
             ? <Text style={[styles.miniTag, { color: colors.text2, backgroundColor: colors.surface3, fontSize: scale.tag }]}>{sourceTag}</Text>
@@ -232,29 +232,29 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
   const durationText = totalSec >= 3600
     ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
     : `${Math.floor(totalSec / 60)} 分钟`
-  const btn = (label: string, onPress: () => void, accent = false) => (
-    <TouchableOpacity key={label} onPress={onPress} style={[styles.actionBtn, { backgroundColor: accent ? colors.accent : colors.surface2, borderColor: colors.line }]}>
-      <Text style={[styles.actionBtnText, { color: accent ? '#fff' : colors.text }]}>{label}</Text>
+  const btn = (label: string, onPress: () => void, accent = false, grid = false) => (
+    <TouchableOpacity key={label} onPress={onPress} style={[styles.actionBtn, grid ? styles.actionBtnGrid : null, { backgroundColor: accent ? colors.accent : colors.surface2, borderColor: colors.line }]}>
+      <Text numberOfLines={1} style={[styles.actionBtnText, { color: accent ? '#fff' : colors.text }]}>{label}</Text>
     </TouchableOpacity>
   )
   return (
     <View style={styles.actionRow}>
       {batch.batchMode
         ? <>
-            {btn('全选', () => batch.selectAll(ids))}
-            {btn('反选', () => batch.invert(ids))}
-            {btn(`加入歌单 (${count})`, () => {
+            {btn('全选', () => batch.selectAll(ids), false, true)}
+            {btn('反选', () => batch.invert(ids), false, true)}
+            {btn(`加入 (${count})`, () => {
               if (!count) return toast('请先选择歌曲')
               onAddToList(getSelected())
-            })}
-            {btn(`缓存所选 (${count})`, () => {
+            }, false, true)}
+            {btn(`缓存 (${count})`, () => {
               if (!count) return toast('请先选择歌曲')
               const n = enqueueCacheMusic(getSelected())
               toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
               batch.exit()
-            })}
-            {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }) : null}
-            {btn('完成', batch.exit, true)}
+            }, false, true)}
+            {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}
+            {btn('完成', batch.exit, true, true)}
           </>
         : <View style={styles.actionBlock}>
             <View style={styles.actionHeader}>
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   sectionHint: { fontSize: 12 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56 },
   emptyText: { fontSize: 13, marginTop: SPACE.md },
-  chip: { height: 32, alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 0, borderRadius: RADIUS.pill, borderWidth: 1, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  chip: { height: 44, alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 0, borderRadius: RADIUS.pill, borderWidth: 1, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   chipText: { fontSize: 13 },
   searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1, paddingLeft: SPACE.md, paddingRight: 4, flex: 1, minWidth: 0, height: 40 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingHorizontal: SPACE.sm, height: 36 },
@@ -577,12 +577,13 @@ const styles = StyleSheet.create({
   playAllTitle: { fontSize: 16, fontWeight: '600' },
   playAllSub: { fontSize: 11, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
   actionRight: { flexDirection: 'row', alignItems: 'center' },
-  iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.sm },
+  iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.sm },
+  actionBtnGrid: { width: '31%', marginRight: '2%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   pagedRow: { paddingHorizontal: SPACE.md },
   pagedEmpty: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.lg },
   loadMore: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.md, borderWidth: 1, borderTopWidth: 0 },
   trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
-  actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  actionBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
   actionBtnText: { fontSize: 13 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
   miniName: { fontSize: 14, fontWeight: '500' },
   miniSub: { fontSize: 11, marginTop: 3 },
   miniControls: { flexDirection: 'row', alignItems: 'center' },
-  miniBtn: { paddingHorizontal: SPACE.md },
+  miniBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACE.sm },
   miniPlayBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   miniTime: { fontSize: 11 },
 })
