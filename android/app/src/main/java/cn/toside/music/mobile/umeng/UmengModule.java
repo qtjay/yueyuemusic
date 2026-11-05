@@ -49,8 +49,7 @@ public class UmengModule extends ReactContextBaseJavaModule {
   private static void initUmeng(Context context) {
     UMConfigure.init(context, APP_KEY, CHANNEL, UMConfigure.DEVICE_TYPE_PHONE, "");
     UMConfigure.setLogEnabled(BuildConfig.DEBUG);
-    // RN 只有一个 Activity，页面由 JS 手动埋点；禁用自动 Activity 采集避免重复
-    MobclickAgent.openActivityDurationTrack(false);
+    // RN 只有一个 Activity，页面访问由 JS 手动调用 onPageStart/onPageEnd 上报
   }
 
   /** 用户在首次启动协议弹窗点击「接受」后调用 */
