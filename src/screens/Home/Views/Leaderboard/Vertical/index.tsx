@@ -16,7 +16,6 @@ import settingState from '@/store/setting/state'
 import { getBoardsList } from '@/core/leaderboard'
 import { COMPONENT_IDS } from '@/config/constant'
 import { handleCollect, handlePlay } from '../listAction'
-import { openSquareDetail } from '@/core/squareBridge'
 import boardState from '@/store/leaderboard/state'
 
 
@@ -41,16 +40,11 @@ export default () => {
   }
   const onBoundChange: BoardsListProps['onBoundChange'] = (id) => {
     const source = boundInfo.current.source
+    // 留在一级页内切换，顶部「平台 / 榜单」按钮常驻；同时立即同步按钮文案
     const name = boardState.boards[source]?.list.find(b => b.id == id)?.name ?? '排行榜'
-    if (openSquareDetail({ mode: 'leaderboard', id, source, name })) return
     boundInfo.current.id = id
-    void getBoardsList(boundInfo.current.source).then(list => {
-      requestAnimationFrame(() => {
-        const bound = list.find(l => l.id == id)
-        headerBarRef.current?.setBound(boundInfo.current.source, id, bound?.name ?? 'Unknown')
-      })
-    })
-    handleBoundChange(boundInfo.current.source, id)
+    headerBarRef.current?.setBound(source, id, name)
+    handleBoundChange(source, id)
     requestAnimationFrame(() => {
       drawer.current?.closeDrawer()
     })
@@ -71,14 +65,13 @@ export default () => {
   const onSourceChange: HeaderBarProps['onSourceChange'] = (source) => {
     boundInfo.current.source = source
     void getBoardsList(source).then(list => {
-      const id = list[0].id
-      const name = list[0].name
+      const first = list[0]
+      const id = first?.id ?? boundInfo.current.id ?? ''
+      const name = first?.name ?? '排行榜'
       requestAnimationFrame(() => {
         boardsListRef.current?.setList(list, id)
-        headerBarRef.current?.setBound(source, id, name ?? 'Unknown')
-        requestAnimationFrame(() => {
-          handleBoundChange(source, id)
-        })
+        headerBarRef.current?.setBound(source, id, name)
+        if (id) handleBoundChange(source, id)
       })
     })
   }
