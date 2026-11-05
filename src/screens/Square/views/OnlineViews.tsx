@@ -26,8 +26,8 @@ import { RADIUS, SPACE, type SquareColors } from '../tokens'
 
 /** 一级：保留原有专辑网格、最新/最热等分类筛选 */
 export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
-  <View style={{ flex: 1, padding: SPACE.lg }}>
-    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
+  <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
+    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg, marginBottom: 0 }}>
       <SongListPage />
     </SectionShell>
   </View>
@@ -62,8 +62,8 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
     : `${Math.floor(totalSec / 60)} 分钟`
 
   return (
-    <View style={{ flex: 1, padding: SPACE.lg }}>
-      <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
+    <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
+      <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg, marginBottom: 0 }}>
         <View style={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity onPress={playAll} style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>

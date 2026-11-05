@@ -219,8 +219,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   return (
     <View style={{ flex: 1 }}>
       {level == 'lists'
-        ? <View style={{ flex: 1, padding: SPACE.lg }}>
-            <SectionShell colors={colors} style={{ flex: 1 }}>
+        ? <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
+            <SectionShell colors={colors} style={{ flex: 1, marginBottom: 0, paddingBottom: 0 }}>
               <SectionHeader colors={colors} title="我的歌单" hint={`${lists.length} 个`} />
               <View style={styles.actionRow}>
                 {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}

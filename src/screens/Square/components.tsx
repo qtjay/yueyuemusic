@@ -350,7 +350,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
   return (
     <FlatList
       style={{ flex: 1 }}
-      contentContainerStyle={{ padding: SPACE.lg }}
+      contentContainerStyle={{ paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}
       data={loading ? [] : visible}
       keyExtractor={(item, index) => `${item.source}_${item.id}_${index}`}
       ListHeaderComponent={header}

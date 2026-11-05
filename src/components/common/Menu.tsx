@@ -1,5 +1,5 @@
 import { useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
-import { View, Animated, TouchableHighlight } from 'react-native'
+import { View, Animated, TouchableHighlight, PixelRatio } from 'react-native'
 import { useWindowSize } from '@/utils/hooks'
 
 import Modal, { type ModalType } from './Modal'
@@ -89,15 +89,20 @@ const Menu = ({
   }, [menuSize, width, height])
 
   const menuStyle = useMemo(() => {
+    // getSize() 是 dp、measure() 是 px，统一换算到 px；底部预留迷你播放条，避免菜单盖住它
+    const ratio = PixelRatio.get()
+    const screenW = windowSize.width * ratio
+    const screenH = windowSize.height * ratio
+    const bottomInset = 100 * ratio
     let menuHeight = menus.length * menuItemStyle.height
     const topHeight = buttonPosition.y - 20
-    const bottomHeight = windowSize.height - buttonPosition.y - buttonPosition.h - 20
+    const bottomHeight = Math.max(0, screenH - buttonPosition.y - buttonPosition.h - bottomInset)
     if (menuHeight > topHeight && menuHeight > bottomHeight) menuHeight = Math.max(topHeight, bottomHeight)
+    if (forceDown) menuHeight = Math.max(0, Math.min(menuHeight, bottomHeight))
 
     const menuWidth = menuItemStyle.width
-    const bottomSpace = windowSize.height - buttonPosition.y - buttonPosition.h - 20
-    const rightSpace = windowSize.width - buttonPosition.x - menuWidth
-    const showInBottom = forceDown || bottomSpace >= menuHeight
+    const rightSpace = screenW - buttonPosition.x - menuWidth
+    const showInBottom = forceDown || bottomHeight >= menuHeight
     const showInRight = rightSpace >= menuWidth
     const frameStyle: {
       height: number
@@ -116,7 +121,7 @@ const Menu = ({
       frameStyle.right = windowSize.width - buttonPosition.x - buttonPosition.w
     }
     return frameStyle
-  }, [menus.length, menuItemStyle, buttonPosition, windowSize])
+  }, [menus.length, menuItemStyle, buttonPosition, windowSize, forceDown])
 
   const menuPress = (menu: Menus[number]) => {
     // if (menu.disabled) return
