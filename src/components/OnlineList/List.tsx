@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { FlatList, useWindowDimensions, type FlatListProps, RefreshControl, View } from 'react-native'
 
 // import { useMusicList } from '@/store/list/hook'
 import ListItem, { ITEM_HEIGHT } from './ListItem'
 import { createStyle, type RowInfoType } from '@/utils/tools'
+import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import type { Position } from './ListMenu'
 import type { SelectMode } from './MultipleModeBar'
 import { useTheme } from '@/store/theme/hook'
@@ -61,6 +62,12 @@ const List = forwardRef<ListType, ListProps>(({
   const flatListRef = useRef<FlatList>(null)
   const [currentList, setList] = useState<LX.Music.MusicInfoOnline[]>([])
   const [showSource, setShowSource] = useState(false)
+  const [cachedIds, setCachedIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    const refresh = () => { void getCachedMusicIds().then(setCachedIds) }
+    refresh()
+    return subscribeCacheUpdate(refresh)
+  }, [])
   const isMultiSelectModeRef = useRef(false)
   const selectModeRef = useRef<SelectMode>('single')
   const prevSelectIndexRef = useRef(-1)
@@ -195,6 +202,7 @@ const List = forwardRef<ListType, ListProps>(({
       onLongPress={handleLongPress}
       onShowMenu={onShowMenu}
       selectedList={selectedList}
+      cachedIds={cachedIds}
       rowInfo={rowInfo}
       isShowAlbumName={isShowAlbumName}
       isShowInterval={isShowInterval}
@@ -237,6 +245,8 @@ const List = forwardRef<ListType, ListProps>(({
 
   return (
     <FlatList
+      // 列数随方向变化时 RN 要求重建，否则抛 Invariant Violation（横屏崩溃）
+      key={`cols-${rowInfo.rowNum ?? 1}`}
       ref={flatListRef}
       style={styles.list}
       data={currentList}

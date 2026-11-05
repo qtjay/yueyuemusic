@@ -19,7 +19,7 @@ const useQualityTag = (musicInfo: LX.Music.MusicInfoOnline) => {
   return ''
 }
 
-export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu, selectedList, rowInfo, isShowAlbumName, isShowInterval }: {
+export default memo(({ item, index, onPress, onLongPress, onShowMenu, selectedList, cachedIds, rowInfo, isShowAlbumName, isShowInterval }: {
   item: LX.Music.MusicInfoOnline
   index: number
   showSource?: boolean
@@ -27,6 +27,7 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
   onLongPress: (item: LX.Music.MusicInfoOnline, index: number) => void
   onShowMenu: (item: LX.Music.MusicInfoOnline, index: number, position: { x: number, y: number, w: number, h: number }) => void
   selectedList: LX.Music.MusicInfoOnline[]
+  cachedIds?: Set<string>
   rowInfo: RowInfo
   isShowAlbumName: boolean
   isShowInterval: boolean
@@ -45,6 +46,7 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
     }
   }
   const qualityTag = useQualityTag(item)
+  const cached = cachedIds?.has(item.id) ?? false
   const [cover, setCover] = useState(() => getCachedMusicCover(item))
   useEffect(() => {
     if (cover) return
@@ -66,10 +68,13 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
         <View style={styles.itemInfo}>
           <Text numberOfLines={1} style={{ fontSize: 13 }}>{item.name}</Text>
           <View style={styles.listItemSingle}>
+            { cached
+              ? <View style={styles.cacheDot}><Text style={styles.cacheDotText}>✓</Text></View>
+              : null }
             { qualityTag
               ? <View style={styles.miniTag}><Text style={styles.miniTagText} color={theme['c-primary-font-active']}>{qualityTag}</Text></View>
               : null }
-            { showSource
+            { item.source
               ? <View style={[styles.miniTag, styles.miniTagSource]}><Text style={styles.miniTagText} color={theme['c-500']}>{item.source}</Text></View>
               : null }
             <Text style={{ ...styles.listItemSingleText, fontSize: 10 }} color={theme['c-500']} numberOfLines={1}>{singer}</Text>
@@ -91,7 +96,8 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
     prevProps.index === nextProps.index &&
     prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
     prevProps.isShowInterval === nextProps.isShowInterval &&
-    nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(nextProps.item)
+    prevProps.cachedIds === nextProps.cachedIds &&
+    nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(prevProps.item)
   )
 })
 
@@ -126,6 +132,20 @@ const styles = createStyle({
     width: 40,
     height: 40,
     borderRadius: 8,
+  },
+  cacheDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#2E86DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 5,
+  },
+  cacheDotText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
   },
   miniTag: {
     borderRadius: 4,
