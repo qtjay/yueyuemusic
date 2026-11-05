@@ -179,21 +179,49 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     const count = enqueueCacheMusic(musics)
     toast(count ? `已加入缓存队列 ${count} 首` : '没有可缓存的歌曲')
   }
-  // 拖拽期间不触发任何 setState，避免重渲染重建 PanResponder 导致手势中断
-  const makeDragPan = (id: string) => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderRelease: (_e, g) => {
-      const steps = Math.round(g.dy / LIST_ROW_H)
-      if (!steps) return
-      if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能调整顺序'); return }
-      const userIds = (listState.userList as unknown as ListEntry[]).map(l => l.id)
-      const fromIdx = userIds.indexOf(id)
-      if (fromIdx < 0) { toast('内置歌单不能调整顺序'); return }
-      const pos = Math.max(0, Math.min(userIds.length - 1, fromIdx + steps))
-      void updateUserListPosition(pos, [id])
-    },
-  })
+  // usePlayerTick 每秒重渲染，PanResponder 必须按 id 缓存，否则拖动途中实例被替换、手势中断
+  const dragPanCache = useRef(new Map<string, ReturnType<typeof PanResponder.create>>())
+  const dragOffsets = useRef(new Map<string, Animated.Value>())
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const getDragOffset = (id: string) => {
+    let value = dragOffsets.current.get(id)
+    if (!value) {
+      value = new Animated.Value(0)
+      dragOffsets.current.set(id, value)
+    }
+    return value
+  }
+  const getDragPan = (id: string) => {
+    const cached = dragPanCache.current.get(id)
+    if (cached) return cached
+    const offset = getDragOffset(id)
+    const responder = PanResponder.create({
+      // capture 阶段抢手势 + 拒绝交出 responder，避免被 ScrollView 的滚动夺走
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => { setDraggingId(id); offset.setValue(0) },
+      onPanResponderMove: (_e, g) => { offset.setValue(g.dy) },
+      onPanResponderRelease: (_e, g) => {
+        setDraggingId(null)
+        offset.setValue(0)
+        let steps = Math.round(g.dy / LIST_ROW_H)
+        // 明显拖动但不足一行时至少移动一位，避免「看着动了、松手顺序没变」
+        if (!steps && Math.abs(g.dy) > LIST_ROW_H * 0.35) steps = g.dy > 0 ? 1 : -1
+        if (!steps) return
+        if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能调整顺序'); return }
+        const userIds = (listState.userList as unknown as ListEntry[]).map(l => l.id)
+        const fromIdx = userIds.indexOf(id)
+        if (fromIdx < 0) { toast('内置歌单不能调整顺序'); return }
+        const pos = Math.max(0, Math.min(userIds.length - 1, fromIdx + steps))
+        void updateUserListPosition(pos, [id])
+      },
+      onPanResponderTerminate: () => { setDraggingId(null); offset.setValue(0) },
+    })
+    dragPanCache.current.set(id, responder)
+    return responder
+  }
 
   // 批量编辑复用管理态的选中集合，避免两套复选状态
   const songIds = songs.map(m => m.id)
@@ -282,9 +310,24 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 {lists.map(list => {
                   const count = (getListMusicSync(list.id) ?? []).length
                   const active = selected.includes(list.id)
-                  const rowBg = active ? colors.accentSoft : 'transparent'
+                  const isDragging = draggingId == list.id
+                  const rowBg = isDragging || active ? colors.accentSoft : 'transparent'
                   return (
-                    <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: rowBg }]}>
+                    <Animated.View
+                      key={list.id}
+                      collapsable={false}
+                      style={[
+                        styles.manageRow,
+                        { borderBottomColor: colors.line, backgroundColor: rowBg },
+                        editing
+                          ? {
+                              transform: [{ translateY: getDragOffset(list.id) }],
+                              elevation: isDragging ? 4 : 0,
+                              zIndex: isDragging ? 2 : 0,
+                            }
+                          : null,
+                      ]}
+                    >
                       {editing
                         ? <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, styles.editCheckBox, { borderColor: colors.accent }]}>
                             <Text style={{ color: colors.accent, fontSize: 10 }}>{active ? '✓' : ''}</Text>
@@ -295,11 +338,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                         <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
                       </TouchableOpacity>
                       {editing
-                        ? <View {...makeDragPan(list.id).panHandlers} style={styles.dragHandle}>
+                        ? <View {...getDragPan(list.id).panHandlers} collapsable={false} style={styles.dragHandle}>
                             <Icon name="menu" color={colors.text2} size={18} />
                           </View>
                         : null}
-                    </View>
+                    </Animated.View>
                   )
                 })}
               </ScrollView>
