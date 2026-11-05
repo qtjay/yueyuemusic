@@ -10,9 +10,11 @@ import SourceSelector, {
   type SourceSelectorType,
 } from './SourceSelector'
 import ActiveListName, { type ActiveListNameType } from './ActiveListName'
+import type { BoardItem } from '@/store/leaderboard/state'
 
 export interface HeaderBarProps {
-  onShowBound: () => void
+  boards: Readonly<BoardItem[]>
+  onBoundChange: (id: string) => void
   onSourceChange: (source: LX.OnlineSource) => void
 }
 
@@ -21,7 +23,7 @@ export interface HeaderBarType {
 }
 
 
-export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourceChange }, ref) => {
+export default forwardRef<HeaderBarType, HeaderBarProps>(({ boards, onBoundChange, onSourceChange }, ref) => {
   const activeListNameRef = useRef<ActiveListNameType>(null)
   const sourceSelectorRef = useRef<SourceSelectorType>(null)
 
@@ -36,7 +38,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
   return (
     <View style={styles.currentList}>
       <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
-      <ActiveListName ref={activeListNameRef} onShowBound={onShowBound} />
+      <ActiveListName ref={activeListNameRef} boards={boards} onBoundChange={onBoundChange} />
     </View>
   )
 })
@@ -45,7 +47,7 @@ const styles = createStyle({
   currentList: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
+    height: 48,
     zIndex: 2,
     borderRadius: 12,
     backgroundColor: 'rgba(128,128,128,0.06)',

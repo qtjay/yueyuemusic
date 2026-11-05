@@ -10,7 +10,7 @@ import { playList } from '@/core/player/player'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
-import { setLeaderboardSongsHandler, type SquareDetailPayload } from '@/core/squareBridge'
+import { emitLeaderboardBatch, setLeaderboardSongsHandler, type SquareDetailPayload } from '@/core/squareBridge'
 import boardState from '@/store/leaderboard/state'
 import {
   AddToListModal,
@@ -72,15 +72,20 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               </View>
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>播放全部</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={cacheAll} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="缓存全部">
-              <Icon name="download-2" color={colors.text2} size={20} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={cacheAll} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="缓存全部">
+                <Icon name="download-2" color={colors.text2} size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={emitLeaderboardBatch} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="批量编辑">
+                <Icon name="menu" color={colors.text2} size={20} />
+              </TouchableOpacity>
+            </View>
           </View>
           <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2 }}>
             {songs.length} 首 · {durationText}
           </Text>
         </View>
-        <View style={{ flex: 1 }}><LeaderboardVertical /></View>
+        <View style={{ flex: 1, paddingHorizontal: SPACE.md }}><LeaderboardVertical /></View>
       </SectionShell>
     </View>
   )

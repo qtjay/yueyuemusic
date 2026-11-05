@@ -58,7 +58,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
 const styles = createStyle({
   searchBar: {
     flexDirection: 'row',
-    height: 44,
+    height: 48,
     zIndex: 2,
     borderRadius: 12,
     backgroundColor: 'rgba(128,128,128,0.06)',

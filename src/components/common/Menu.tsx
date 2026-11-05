@@ -60,6 +60,7 @@ interface Props<M extends Menus = Menus> {
   fontSize?: number
   center?: boolean
   activeId?: M[number]['action'] | null
+  forceDown?: boolean
 }
 
 const Menu = ({
@@ -73,6 +74,7 @@ const Menu = ({
   activeId,
   fontSize = 15,
   center = false,
+  forceDown = false,
 }: Props) => {
   const theme = useTheme()
   const windowSize = useWindowSize()
@@ -95,7 +97,7 @@ const Menu = ({
     const menuWidth = menuItemStyle.width
     const bottomSpace = windowSize.height - buttonPosition.y - buttonPosition.h - 20
     const rightSpace = windowSize.width - buttonPosition.x - menuWidth
-    const showInBottom = bottomSpace >= menuHeight
+    const showInBottom = forceDown || bottomSpace >= menuHeight
     const showInRight = rightSpace >= menuWidth
     const frameStyle: {
       height: number
@@ -176,6 +178,7 @@ export interface MenuProps<M extends Menus = Menus> {
   fontSize?: number
   center?: boolean
   activeId?: M[number]['action'] | null
+  forceDown?: boolean
 }
 
 export interface MenuType {
@@ -183,7 +186,7 @@ export interface MenuType {
   hide: () => void
 }
 
-const Component = <M extends Menus>({ menus, width, height, activeId, onHide, onPress, fontSize, center }: MenuProps<M>, ref: Ref<MenuType>) => {
+const Component = <M extends Menus>({ menus, width, height, activeId, onHide, onPress, fontSize, center, forceDown }: MenuProps<M>, ref: Ref<MenuType>) => {
   // console.log(visible)
   const modalRef = useRef<ModalType>(null)
   const [position, setPosition] = useState<Position>({ w: 0, h: 0, x: 0, y: 0 })
@@ -204,7 +207,7 @@ const Component = <M extends Menus>({ menus, width, height, activeId, onHide, on
 
   return (
     <Modal onHide={onHide} ref={modalRef}>
-      <Menu menus={menus} width={width} height={height} activeId={activeId} buttonPosition={position} menuSize={menuSize} onPress={onPress} onHide={hide} fontSize={fontSize} center={center} />
+      <Menu menus={menus} width={width} height={height} activeId={activeId} buttonPosition={position} menuSize={menuSize} onPress={onPress} onHide={hide} fontSize={fontSize} center={center} forceDown={forceDown} />
     </Modal>
   )
 }

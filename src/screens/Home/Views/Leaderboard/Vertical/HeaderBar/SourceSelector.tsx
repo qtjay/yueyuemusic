@@ -33,14 +33,14 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
 
   return (
     <View style={StyleSheet.compose<ViewStyle, ViewStyle, ViewStyle>(styles.selector, style)}>
-      <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} center />
+      <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} center forceDown />
     </View>
   )
 })
 
 const styles = createStyle({
   selector: {
-    minHeight: 36,
+    minHeight: 40,
     justifyContent: 'center',
     borderRadius: 999,
     backgroundColor: 'rgba(128,128,128,0.08)',

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { View } from 'react-native'
 import { createStyle } from '@/utils/tools'
 
@@ -16,7 +16,7 @@ import settingState from '@/store/setting/state'
 import { getBoardsList } from '@/core/leaderboard'
 import { COMPONENT_IDS } from '@/config/constant'
 import { handleCollect, handlePlay } from '../listAction'
-import boardState from '@/store/leaderboard/state'
+import boardState, { type BoardItem } from '@/store/leaderboard/state'
 
 
 const MAX_WIDTH = scaleSizeW(200)
@@ -29,7 +29,7 @@ export default () => {
   const boardsListRef = useRef<BoardsListType>(null)
   const headerBarRef = useRef<HeaderBarType>(null)
   const boundInfo = useRef<{ source: LX.OnlineSource, id: string | null }>({ source: 'kw', id: null })
-  // const [width, setWidth] = useState(0)
+  const [boards, setBoards] = useState<BoardItem[]>([])
 
   const handleBoundChange = (source: LX.OnlineSource, id: string) => {
     musicListRef.current?.loadList(source, id)
@@ -41,7 +41,7 @@ export default () => {
   const onBoundChange: BoardsListProps['onBoundChange'] = (id) => {
     const source = boundInfo.current.source
     // 留在一级页内切换，顶部「平台 / 榜单」按钮常驻；同时立即同步按钮文案
-    const name = boardState.boards[source]?.list.find(b => b.id == id)?.name ?? '排行榜'
+    const name = boards.find(b => b.id == id)?.name ?? boardState.boards[source]?.list.find(b => b.id == id)?.name ?? '排行榜'
     boundInfo.current.id = id
     headerBarRef.current?.setBound(source, id, name)
     handleBoundChange(source, id)
@@ -57,14 +57,10 @@ export default () => {
     boundInfo.current.id = id
     void handleCollect(id, name, boundInfo.current.source)
   }
-  const onShowBound = () => {
-    requestAnimationFrame(() => {
-      drawer.current?.openDrawer()
-    })
-  }
   const onSourceChange: HeaderBarProps['onSourceChange'] = (source) => {
     boundInfo.current.source = source
     void getBoardsList(source).then(list => {
+      setBoards(list ?? [])
       const first = list[0]
       const id = first?.id ?? boundInfo.current.id ?? ''
       const name = first?.name ?? '排行榜'
@@ -102,6 +98,7 @@ export default () => {
       boundInfo.current.source = source
       boundInfo.current.id = boardId
       void getBoardsList(source).then(list => {
+        setBoards(list ?? [])
         const bound = list.find(l => l.id == boardId)
         boardsListRef.current?.setList(list, boardId)
         headerBarRef.current?.setBound(source, boardId, bound?.name ?? 'Unknown')
@@ -129,7 +126,7 @@ export default () => {
       style={{ elevation: 1 }}
     >
       <View style={styles.container}>
-        <HeaderBar ref={headerBarRef} onShowBound={onShowBound} onSourceChange={onSourceChange} />
+        <HeaderBar ref={headerBarRef} boards={boards} onBoundChange={onBoundChange} onSourceChange={onSourceChange} />
         <MusicList ref={musicListRef} />
       </View>
     </DrawerLayoutFixed>

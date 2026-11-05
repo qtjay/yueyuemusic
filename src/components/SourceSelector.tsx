@@ -13,6 +13,7 @@ type Sources = Readonly<Array<LX.OnlineSource | 'all'>>
 export interface SourceSelectorProps<S extends Sources> {
   fontSize?: number
   center?: _DorpDownMenuProps<any>['center']
+  forceDown?: boolean
   onSourceChange: (source: S[number]) => void
 }
 
@@ -29,7 +30,7 @@ export const useSourceListI18n = (list: Sources) => {
   }, [list, sourceNameType, t])
 }
 
-const Component = <S extends Sources>({ fontSize = 15, center, onSourceChange }: SourceSelectorProps<S>, ref: Ref<SourceSelectorType<S>>) => {
+const Component = <S extends Sources>({ fontSize = 16, center, forceDown, onSourceChange }: SourceSelectorProps<S>, ref: Ref<SourceSelectorType<S>>) => {
   const sourceNameType = useSettingValue('common.sourceNameType')
   const [list, setList] = useState([] as unknown as S)
   const [source, setSource] = useState<S[number]>('kw')
@@ -58,6 +59,7 @@ const Component = <S extends Sources>({ fontSize = 15, center, onSourceChange }:
       onPress={handleChangeSource}
       fontSize={fontSize}
       activeId={source}
+      forceDown={forceDown}
     >
       <View style={styles.sourceMenu}>
         <Text style={{ textAlign: center ? 'center' : 'left' }} numberOfLines={1} size={fontSize}>{t(`source_${sourceNameType}_${source}`)}</Text>
@@ -75,8 +77,8 @@ const styles = createStyle({
     justifyContent: 'center',
     // paddingTop: 12,
     // paddingBottom: 12,
-    paddingLeft: 15,
-    paddingRight: 15,
+    paddingLeft: 16,
+    paddingRight: 16,
     // backgroundColor: '#ccc',
 
   },

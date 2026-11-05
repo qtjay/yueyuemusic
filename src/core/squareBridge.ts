@@ -8,6 +8,7 @@ export interface SquareDetailPayload {
 
 let handler: ((payload: SquareDetailPayload) => void) | null = null
 let songsHandler: ((songs: LX.Music.MusicInfoOnline[]) => void) | null = null
+let batchHandler: (() => void) | null = null
 
 /** 由 Square 容器注册；旧页面点击歌单/榜单时优先走这里 */
 export const setSquareDetailHandler = (fn: ((payload: SquareDetailPayload) => void) | null) => {
@@ -27,4 +28,12 @@ export const setLeaderboardSongsHandler = (fn: ((songs: LX.Music.MusicInfoOnline
 }
 export const emitLeaderboardSongs = (songs: LX.Music.MusicInfoOnline[]) => {
   songsHandler?.(songs)
+}
+
+/** 由 MusicList 注册，Square 操作条的「批量编辑」按钮调用 */
+export const setLeaderboardBatchHandler = (fn: (() => void) | null) => {
+  batchHandler = fn
+}
+export const emitLeaderboardBatch = () => {
+  batchHandler?.()
 }

@@ -34,16 +34,17 @@ export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }
 
 const styles = createStyle({
   btn: {
-    paddingLeft: 15,
-    paddingRight: 15,
+    minHeight: 40,
+    paddingLeft: 16,
+    paddingRight: 16,
     justifyContent: 'center',
     marginHorizontal: 6,
+    marginVertical: 4,
     borderRadius: 999,
     backgroundColor: 'rgba(128,128,128,0.08)',
   },
   sourceMenu: {
-    // height: 38,
-    // lineHeight: 38,
+    fontSize: 16,
     textAlign: 'center',
     // minWidth: 70,
     // paddingTop: 10,

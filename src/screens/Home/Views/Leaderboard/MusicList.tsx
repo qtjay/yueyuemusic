@@ -3,7 +3,7 @@ import OnlineList, { type OnlineListType, type OnlineListProps } from '@/compone
 import { clearListDetail, getListDetail, setListDetail, setListDetailInfo } from '@/core/leaderboard'
 import boardState from '@/store/leaderboard/state'
 import { handlePlay } from './listAction'
-import { emitLeaderboardSongs } from '@/core/squareBridge'
+import { emitLeaderboardSongs, setLeaderboardBatchHandler } from '@/core/squareBridge'
 
 // export type MusicListProps = Pick<OnlineListProps,
 // 'onLoadMore'
@@ -50,8 +50,10 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
 
   useEffect(() => {
     isUnmountedRef.current = false
+    setLeaderboardBatchHandler(() => { listRef.current?.enterMultiSelect() })
     return () => {
       isUnmountedRef.current = true
+      setLeaderboardBatchHandler(null)
     }
   }, [])
 

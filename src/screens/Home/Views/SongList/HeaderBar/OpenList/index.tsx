@@ -50,7 +50,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   return (
     <>
       <Button style={styles.button} onPress={() => modalRef.current?.show(songlistInfoRef.current.source)}>
-        <Text>{t('songlist_open')}</Text>
+        <Text style={styles.text}>{t('songlist_open')}</Text>
       </Button>
       <Modal ref={modalRef} onOpenId={handleOpenSonglist} />
     </>
@@ -59,14 +59,17 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
 
 const styles = createStyle({
   button: {
-    minHeight: 36,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 12,
-    paddingRight: 12,
+    paddingLeft: 16,
+    paddingRight: 16,
     marginRight: 6,
     marginVertical: 4,
     borderRadius: 999,
     backgroundColor: 'rgba(128,128,128,0.08)',
+  },
+  text: {
+    fontSize: 16,
   },
 })

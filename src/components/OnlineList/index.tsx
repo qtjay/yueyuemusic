@@ -21,6 +21,8 @@ export interface OnlineListProps {
 export interface OnlineListType {
   setList: (list: LX.Music.MusicInfoOnline[], isAppend?: boolean, showSource?: boolean) => void
   setStatus: (val: Status) => void
+  /** 供外部（Square 操作条）进入批量编辑态 */
+  enterMultiSelect: () => void
 }
 
 export default forwardRef<OnlineListType, OnlineListProps>(({
@@ -46,6 +48,10 @@ export default forwardRef<OnlineListType, OnlineListProps>(({
     },
     setStatus(val) {
       listRef.current?.setStatus(val)
+    },
+    enterMultiSelect() {
+      multipleModeBarRef.current?.show()
+      listRef.current?.setIsMultiSelectMode(true)
     },
   }))
 
