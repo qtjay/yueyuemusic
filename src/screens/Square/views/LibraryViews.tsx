@@ -262,15 +262,20 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 </TouchableOpacity>}
               />
               {editing
-                ? <View style={styles.actionRow}>
-                    <TouchableOpacity onPress={selectAllLists} style={styles.selectAllBtn}>
+                ? <View style={styles.editActionRow}>
+                    <TouchableOpacity onPress={selectAllLists} style={styles.selectAllBtn} accessibilityLabel="全选">
                       <Icon name={allListsSelected ? 'checkbox-marked' : 'checkbox-blank-outline'} color={colors.accent} size={18} />
-                      <Text style={{ color: colors.text2, fontSize: 13, marginLeft: 6 }}>全选</Text>
                     </TouchableOpacity>
-                    <ActionButton colors={colors} label="新建" onPress={handleCreate} />
-                    <ActionButton colors={colors} label="删除" onPress={handleDelete} />
-                    <ActionButton colors={colors} label="改名" onPress={handleRename} />
-                    <ActionButton colors={colors} label="缓存" onPress={handleCacheSelected} />
+                    {([
+                      ['新建', handleCreate],
+                      ['删除', handleDelete],
+                      ['改名', handleRename],
+                      ['缓存', handleCacheSelected],
+                    ] as const).map(([label, onPress]) => (
+                      <TouchableOpacity key={label} onPress={onPress} style={[styles.editBtn, { backgroundColor: colors.surface2, borderColor: colors.line }]}>
+                        <Text style={[styles.editBtnText, { color: colors.text }]}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 : null}
               <ScrollView style={{ flex: 1 }}>
@@ -281,8 +286,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                   return (
                     <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: rowBg }]}>
                       {editing
-                        ? <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
-                            <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
+                        ? <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, styles.editCheckBox, { borderColor: colors.accent }]}>
+                            <Text style={{ color: colors.accent, fontSize: 10 }}>{active ? '✓' : ''}</Text>
                           </TouchableOpacity>
                         : <View style={styles.folderIcon}><Icon name="add_folder" color={colors.text2} size={20} /></View>}
                       <TouchableOpacity onPress={() => editing ? toggleSelect(list.id) : openList(list.id)} style={{ flex: 1 }}>
@@ -655,7 +660,11 @@ const styles = StyleSheet.create({
   manageRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
   checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   headerBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: SPACE.sm },
-  selectAllBtn: { flexDirection: 'row', alignItems: 'center', minHeight: 44, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  selectAllBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.xs },
+  editActionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', marginBottom: SPACE.sm },
+  editCheckBox: { width: 18, height: 18, borderRadius: 9, marginRight: SPACE.sm },
+  editBtn: { flex: 1, minHeight: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.xs, marginLeft: SPACE.xs },
+  editBtnText: { fontSize: 12 },
   folderIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   dragHandle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   manageName: { fontSize: 13, paddingVertical: 10 },
