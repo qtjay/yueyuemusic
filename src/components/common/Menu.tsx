@@ -1,5 +1,5 @@
 import { useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
-import { View, Animated, TouchableHighlight, PixelRatio } from 'react-native'
+import { View, Animated, TouchableHighlight, Dimensions, PixelRatio } from 'react-native'
 import { useWindowSize } from '@/utils/hooks'
 
 import Modal, { type ModalType } from './Modal'
@@ -89,16 +89,19 @@ const Menu = ({
   }, [menuSize, width, height])
 
   const menuStyle = useMemo(() => {
-    // getSize() 是 dp、measure() 是 px，统一换算到 px；底部预留迷你播放条，避免菜单盖住它
-    const ratio = PixelRatio.get()
-    const screenW = windowSize.width * ratio
-    const screenH = windowSize.height * ratio
-    const bottomInset = 100 * ratio
-    let menuHeight = menus.length * menuItemStyle.height
-    const topHeight = buttonPosition.y - 20
+    // getSize() 单位不稳定（dp/px 取决于 native 回调），统一用 Dimensions 实时换算成 px
+    const win = Dimensions.get('window')
+    const ratio = win.scale || PixelRatio.get()
+    const screenW = win.width * ratio
+    const screenH = win.height * ratio
+    const bottomInset = 110 * ratio
     const bottomHeight = Math.max(0, screenH - buttonPosition.y - buttonPosition.h - bottomInset)
+    const hardMax = screenH * 0.5   // 半屏硬上限，防止任何单位误差导致菜单压住迷你播放条
+    let menuHeight = menus.length * menuItemStyle.height
+    const topHeight = Math.max(0, buttonPosition.y - 20)
     if (menuHeight > topHeight && menuHeight > bottomHeight) menuHeight = Math.max(topHeight, bottomHeight)
-    if (forceDown) menuHeight = Math.max(0, Math.min(menuHeight, bottomHeight))
+    menuHeight = Math.min(menuHeight, Math.max(menuItemStyle.height, Math.min(bottomHeight, hardMax)))
+    if (forceDown) menuHeight = Math.min(menuHeight, bottomHeight)
 
     const menuWidth = menuItemStyle.width
     const rightSpace = screenW - buttonPosition.x - menuWidth
@@ -118,7 +121,7 @@ const Menu = ({
     if (showInRight) {
       frameStyle.left = buttonPosition.x
     } else {
-      frameStyle.right = windowSize.width - buttonPosition.x - buttonPosition.w
+      frameStyle.right = screenW - buttonPosition.x - buttonPosition.w
     }
     return frameStyle
   }, [menus.length, menuItemStyle, buttonPosition, windowSize, forceDown])
