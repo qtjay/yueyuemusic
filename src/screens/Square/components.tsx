@@ -292,16 +292,19 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
         <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.modalTitle, { color: colors.text }]}>加入到歌单</Text>
           <ScrollView style={{ maxHeight: 320 }}>
-            {lists.map(l => (
-              <TouchableOpacity key={l.id} onPress={() => {
-                void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
-                  toast(`已加入「${l.name ?? l.id}」`)
-                  onClose()
-                })
-              }} style={styles.modalItem}>
-                <Text style={{ color: colors.text, fontSize: 14 }}>{l.name ?? l.id}</Text>
-              </TouchableOpacity>
-            ))}
+            {lists.map(l => {
+              const label = l.id == 'default' ? '未播放历史' : (l.name ?? l.id)
+              return (
+                <TouchableOpacity key={l.id} onPress={() => {
+                  void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
+                    toast(`已加入「${label}」`)
+                    onClose()
+                  })
+                }} style={styles.modalItem}>
+                  <Text style={{ color: colors.text, fontSize: 14 }}>{label}</Text>
+                </TouchableOpacity>
+              )
+            })}
           </ScrollView>
           <TouchableOpacity onPress={onClose} style={styles.modalBtn}>
             <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
