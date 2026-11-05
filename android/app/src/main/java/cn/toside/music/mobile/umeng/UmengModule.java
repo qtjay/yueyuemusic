@@ -47,6 +47,8 @@ public class UmengModule extends ReactContextBaseJavaModule {
   }
 
   private static void initUmeng(Context context) {
+    // 必须在 init 前告知 SDK 用户已同意隐私政策，否则 SDK 拦截采集并输出 E 级日志
+    UMConfigure.submitPolicyGrantResult(context, true);
     UMConfigure.init(context, APP_KEY, CHANNEL, UMConfigure.DEVICE_TYPE_PHONE, "");
     UMConfigure.setLogEnabled(BuildConfig.DEBUG);
     // RN 只有一个 Activity，页面访问由 JS 手动调用 onPageStart/onPageEnd 上报
