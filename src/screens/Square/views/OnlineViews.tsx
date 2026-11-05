@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import { View } from 'react-native'
 import SongListPage from '@/screens/Home/Views/SongList'
-import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
+import LeaderboardVertical from '@/screens/Home/Views/Leaderboard/Vertical'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
 import { getListDetailAll as getBoardDetailAll } from '@/core/leaderboard'
 import { overwriteListMusics } from '@/core/list'
@@ -35,7 +35,7 @@ SonglistView.displayName = 'SonglistView'
 export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => (
   <View style={{ flex: 1, padding: SPACE.lg }}>
     <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
-      <LeaderboardPage />
+      <LeaderboardVertical />
     </SectionShell>
   </View>
 ))

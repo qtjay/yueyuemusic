@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
-import { FlatList, type FlatListProps, RefreshControl, View } from 'react-native'
+import { FlatList, useWindowDimensions, type FlatListProps, RefreshControl, View } from 'react-native'
 
 // import { useMusicList } from '@/store/list/hook'
 import ListItem, { ITEM_HEIGHT } from './ListItem'
-import { createStyle, getRowInfo, type RowInfoType } from '@/utils/tools'
+import { createStyle, type RowInfoType } from '@/utils/tools'
 import type { Position } from './ListMenu'
 import type { SelectMode } from './MultipleModeBar'
 import { useTheme } from '@/store/theme/hook'
@@ -68,7 +68,13 @@ const List = forwardRef<ListType, ListProps>(({
   const selectedListRef = useRef<LX.Music.MusicInfoOnline[]>([])
   const [visibleMultiSelect, setVisibleMultiSelect] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
-  const rowInfo = useRef(getRowInfo(rowType))
+  // 列数随窗口尺寸实时重算，避免启动时横屏导致竖屏下残留双列
+  const { width, height } = useWindowDimensions()
+  const rowInfo = useMemo(() => {
+    const ratio = width / height
+    const isMultiRow = ratio > 1.2 && !(rowType == 'medium' && ratio < 1.8)
+    return { rowNum: isMultiRow ? 2 : undefined, rowWidth: (isMultiRow ? '50%' : '100%') as `${number}%` }
+  }, [width, height, rowType])
   const isShowAlbumName = useSettingValue('list.isShowAlbumName')
   const isShowInterval = useSettingValue('list.isShowInterval')
   // const currentListIdRef = useRef('')
@@ -189,7 +195,7 @@ const List = forwardRef<ListType, ListProps>(({
       onLongPress={handleLongPress}
       onShowMenu={onShowMenu}
       selectedList={selectedList}
-      rowInfo={rowInfo.current}
+      rowInfo={rowInfo}
       isShowAlbumName={isShowAlbumName}
       isShowInterval={isShowInterval}
     />
@@ -234,7 +240,7 @@ const List = forwardRef<ListType, ListProps>(({
       ref={flatListRef}
       style={styles.list}
       data={currentList}
-      numColumns={rowInfo.current.rowNum}
+      numColumns={rowInfo.rowNum}
       horizontal={false}
       maxToRenderPerBatch={4}
       // updateCellsBatchingPeriod={80}
