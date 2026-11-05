@@ -7,6 +7,7 @@ export interface SquareDetailPayload {
 }
 
 let handler: ((payload: SquareDetailPayload) => void) | null = null
+let songsHandler: ((songs: LX.Music.MusicInfoOnline[]) => void) | null = null
 
 /** 由 Square 容器注册；旧页面点击歌单/榜单时优先走这里 */
 export const setSquareDetailHandler = (fn: ((payload: SquareDetailPayload) => void) | null) => {
@@ -18,4 +19,12 @@ export const openSquareDetail = (payload: SquareDetailPayload): boolean => {
   if (!handler) return false
   handler(payload)
   return true
+}
+
+/** 排行榜一级的歌曲列表变化通知，供 Square 自绘「播放全部」操作条使用 */
+export const setLeaderboardSongsHandler = (fn: ((songs: LX.Music.MusicInfoOnline[]) => void) | null) => {
+  songsHandler = fn
+}
+export const emitLeaderboardSongs = (songs: LX.Music.MusicInfoOnline[]) => {
+  songsHandler?.(songs)
 }

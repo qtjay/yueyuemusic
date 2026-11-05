@@ -3,6 +3,7 @@ import OnlineList, { type OnlineListType, type OnlineListProps } from '@/compone
 import { clearListDetail, getListDetail, setListDetail, setListDetailInfo } from '@/core/leaderboard'
 import boardState from '@/store/leaderboard/state'
 import { handlePlay } from './listAction'
+import { emitLeaderboardSongs } from '@/core/squareBridge'
 
 // export type MusicListProps = Pick<OnlineListProps,
 // 'onLoadMore'
@@ -21,9 +22,11 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
     async loadList(source, id) {
       const listDetailInfo = boardState.listDetailInfo
       listRef.current?.setList([])
+      emitLeaderboardSongs([])
       if (listDetailInfo.id == id && listDetailInfo.source == source && listDetailInfo.list.length) {
         requestAnimationFrame(() => {
           listRef.current?.setList(listDetailInfo.list, false, true)
+          emitLeaderboardSongs(listDetailInfo.list)
         })
       } else {
         listRef.current?.setStatus('loading')
@@ -34,6 +37,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
           if (isUnmountedRef.current) return
           requestAnimationFrame(() => {
             listRef.current?.setList(result.list, false, true)
+            emitLeaderboardSongs(boardState.listDetailInfo.list)
             listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
           })
         }).catch(() => {
@@ -64,6 +68,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
       const result = setListDetail(listDetail, boardState.listDetailInfo.id, page)
       if (isUnmountedRef.current) return
       listRef.current?.setList(result.list, false, true)
+      emitLeaderboardSongs(boardState.listDetailInfo.list)
       listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
     }).catch(() => {
       if (boardState.listDetailInfo.list.length && page == 1) clearListDetail()
@@ -77,6 +82,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
       const result = setListDetail(listDetail, boardState.listDetailInfo.id, page)
       if (isUnmountedRef.current) return
       listRef.current?.setList(result.list, true, true)
+      emitLeaderboardSongs(boardState.listDetailInfo.list)
       listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
     }).catch(() => {
       if (boardState.listDetailInfo.list.length && page == 1) clearListDetail()

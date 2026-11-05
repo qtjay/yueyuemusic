@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { Text, TouchableOpacity, View } from 'react-native'
+import { Icon } from '@/components/common/Icon'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardVertical from '@/screens/Home/Views/Leaderboard/Vertical'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
@@ -9,7 +10,8 @@ import { playList } from '@/core/player/player'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
-import { type SquareDetailPayload } from '@/core/squareBridge'
+import { setLeaderboardSongsHandler, type SquareDetailPayload } from '@/core/squareBridge'
+import boardState from '@/store/leaderboard/state'
 import {
   AddToListModal,
   ListActionBar,
@@ -32,13 +34,57 @@ export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
 ))
 SonglistView.displayName = 'SonglistView'
 
-export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => (
-  <View style={{ flex: 1, padding: SPACE.lg }}>
-    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
-      <LeaderboardVertical />
-    </SectionShell>
-  </View>
-))
+export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
+  const [songs, setSongs] = useState<LX.Music.MusicInfoOnline[]>([])
+  useEffect(() => {
+    // 子组件首帧可能早于注册，先用当前榜单数据兜底
+    setSongs(boardState.listDetailInfo.list)
+    setLeaderboardSongsHandler(setSongs)
+    return () => setLeaderboardSongsHandler(null)
+  }, [])
+
+  const playAll = () => {
+    if (!songs.length) return
+    void overwriteListMusics('temp', songs).then(() => { void playList('temp', 0) })
+  }
+  const cacheAll = () => {
+    const n = enqueueCacheMusic(songs)
+    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+  }
+  const totalSec = songs.reduce((acc, m) => {
+    const raw = (m as unknown as { interval?: string }).interval
+    if (!raw || !raw.includes(':')) return acc
+    const [mm, ss] = raw.split(':').map(Number)
+    return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
+  }, 0)
+  const durationText = totalSec >= 3600
+    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
+    : `${Math.floor(totalSec / 60)} 分钟`
+
+  return (
+    <View style={{ flex: 1, padding: SPACE.lg }}>
+      <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg }}>
+        <View style={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={playAll} style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md }}>
+                <Text style={{ color: '#fff', fontSize: 15 }}>▶</Text>
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>播放全部</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={cacheAll} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="缓存全部">
+              <Icon name="download-2" color={colors.text2} size={20} />
+            </TouchableOpacity>
+          </View>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2 }}>
+            {songs.length} 首 · {durationText}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}><LeaderboardVertical /></View>
+      </SectionShell>
+    </View>
+  )
+})
 LeaderboardView.displayName = 'LeaderboardView'
 
 const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { View, TouchableOpacity, Image } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
@@ -7,6 +7,8 @@ import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle, type RowInfo } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
+import { enqueueCacheMusic } from '@/core/musicCache/queue'
+import { toast } from '@/utils/tools'
 
 /** 与 Square 歌曲列表统一行高 */
 export const ITEM_HEIGHT = 60
@@ -19,7 +21,7 @@ const useQualityTag = (musicInfo: LX.Music.MusicInfoOnline) => {
   return ''
 }
 
-export default memo(({ item, index, onPress, onLongPress, onShowMenu, selectedList, cachedIds, rowInfo, isShowAlbumName, isShowInterval }: {
+export default memo(({ item, index, onPress, onLongPress, selectedList, cachedIds, rowInfo, isShowAlbumName, isShowInterval }: {
   item: LX.Music.MusicInfoOnline
   index: number
   showSource?: boolean
@@ -36,15 +38,6 @@ export default memo(({ item, index, onPress, onLongPress, onShowMenu, selectedLi
 
   const isSelected = selectedList.includes(item)
 
-  const moreButtonRef = useRef<TouchableOpacity>(null)
-  const handleShowMenu = () => {
-    if (moreButtonRef.current?.measure) {
-      moreButtonRef.current.measure((fx, fy, width, height, px, py) => {
-        // console.log(fx, fy, width, height, px, py)
-        onShowMenu(item, index, { x: Math.ceil(px), y: Math.ceil(py), w: Math.ceil(width), h: Math.ceil(height) })
-      })
-    }
-  }
   const qualityTag = useQualityTag(item)
   const cached = cachedIds?.has(item.id) ?? false
   const [cover, setCover] = useState(() => getCachedMusicCover(item))
@@ -86,9 +79,14 @@ export default memo(({ item, index, onPress, onLongPress, onShowMenu, selectedLi
           ) : null
         }
       </TouchableOpacity>
-     <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton}>
-        <Icon name="dots-vertical" style={{ color: theme['c-350'] }} size={18} />
-      </TouchableOpacity>
+     {!cached
+       ? <TouchableOpacity onPress={() => {
+           const n = enqueueCacheMusic([item])
+           toast(n ? '已加入缓存队列' : '没有可缓存的歌曲')
+         }} style={styles.moreButton} accessibilityLabel="缓存这首歌">
+           <Icon name="download-2" style={{ color: theme['c-350'] }} size={18} />
+         </TouchableOpacity>
+       : null}
     </View>
   )
 }, (prevProps, nextProps) => {
