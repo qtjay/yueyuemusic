@@ -52,11 +52,11 @@ export const SectionHeader = memo(({ colors, title, hint, right }: {
   right?: React.ReactNode
 }) => (
   <View style={styles.sectionHeader}>
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', flex: 1 }}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-      {hint ? <Text style={[styles.sectionHint, { color: colors.text3 }]}>　{hint}</Text> : null}
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', flex: 1, minWidth: 0 }}>
+      <Text numberOfLines={1} style={[styles.sectionTitle, { color: colors.text, flexShrink: 1 }]}>{title}</Text>
+      {hint ? <Text numberOfLines={1} style={[styles.sectionHint, { color: colors.text3, flexShrink: 1 }]}>　{hint}</Text> : null}
     </View>
-    {right}
+    {right ? <View style={styles.sectionHeaderRight}>{right}</View> : null}
   </View>
 ))
 SectionHeader.displayName = 'SectionHeader'
@@ -185,9 +185,10 @@ export const TrackRow = memo(({ colors, index, musicInfo, isTablet, isCompact, o
         ? <Text numberOfLines={1} style={[styles.trackAlbum, { color: colors.text2 }]}>{meta?.albumName ?? ''}</Text>
         : null}
       {interval ? <Text style={[styles.trackTime, { color: colors.text3 }]}>{interval}</Text> : null}
-      {onCache
+      {/* 已缓存由副标题蓝色圆勾表示，右侧只保留「未缓存 → 下载」动作，避免两套勾选语义 */}
+      {onCache && !cached
         ? <TouchableOpacity onPress={onCache} style={styles.trackAction}>
-            <Icon name={cached ? 'checkbox-marked' : 'download-2'} color={cached ? colors.accent : colors.text3} size={18} />
+            <Icon name="download-2" color={colors.text3} size={18} />
           </TouchableOpacity>
         : null}
     </TouchableOpacity>
@@ -340,6 +341,12 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
     canLoadMore.current = false
     setLimit(n => Math.min(n + PAGE_SIZE, songs.length))
   }
+  // 列表行与顶部卡片共用左右描边，末行/footer 收圆角，避免「卡片被切开」
+  const rowBorder = { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.line }
+  const rowLast = { borderBottomWidth: 1, borderBottomLeftRadius: RADIUS.lg, borderBottomRightRadius: RADIUS.lg, overflow: 'hidden' as const }
+  const emptyNode = loading
+    ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
+    : (empty ?? <Empty colors={colors} text="没有找到歌曲" />)
   return (
     <FlatList
       style={{ flex: 1 }}
@@ -348,19 +355,24 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
       keyExtractor={(item, index) => `${item.source}_${item.id}_${index}`}
       ListHeaderComponent={header}
       renderItem={({ item, index }) => (
-        <View style={[styles.pagedRow, { backgroundColor: colors.surface }]}>{renderRow(item, index)}</View>
+        <View style={[
+          styles.pagedRow,
+          rowBorder,
+          { backgroundColor: colors.surface },
+          !hasMore && index == (loading ? -1 : visible.length - 1) ? rowLast : null,
+        ]}>{renderRow(item, index)}</View>
       )}
       ListFooterComponent={hasMore
-        ? <TouchableOpacity onPress={() => loadMore(true)} style={[styles.loadMore, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+        ? <TouchableOpacity onPress={() => loadMore(true)} style={[styles.loadMore, { backgroundColor: colors.surface, borderColor: colors.line }, rowLast]}>
             <Text style={{ color: colors.text2, fontSize: 12 }}>加载更多（还有 {songs.length - limit} 首）</Text>
           </TouchableOpacity>
         : null}
       onEndReached={() => loadMore()}
       onMomentumScrollEnd={() => { canLoadMore.current = true }}
       onEndReachedThreshold={0.5}
-      ListEmptyComponent={loading
-        ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 32 }} />
-        : empty === null ? null : (empty ?? <Empty colors={colors} text="没有找到歌曲" />)}
+      ListEmptyComponent={empty === null
+        ? null
+        : <View style={[styles.pagedEmpty, rowBorder, rowLast, { backgroundColor: colors.surface }]}>{emptyNode}</View>}
     />
   )
 })
@@ -528,6 +540,7 @@ MiniPlayer.displayName = 'MiniPlayer'
 const styles = StyleSheet.create({
   card: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACE.lg, marginBottom: SPACE.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACE.md },
+  sectionHeaderRight: { flexShrink: 0, marginLeft: SPACE.sm },
   sectionTitle: { fontSize: 17, fontWeight: '600' },
   sectionHint: { fontSize: 12 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56 },
@@ -566,6 +579,7 @@ const styles = StyleSheet.create({
   actionRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.sm },
   pagedRow: { paddingHorizontal: SPACE.md },
+  pagedEmpty: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.lg },
   loadMore: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.md, borderWidth: 1, borderTopWidth: 0 },
   trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
   actionBtn: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },

@@ -83,7 +83,6 @@ export default ({ componentId }: { componentId: string }) => {
     isCompact,
     payload: browseDetail!,
     filterText,
-    onBack: () => { setBrowseDetail(null); setFilterText('') },
     onPlaySong: handlePlaySong,
   }
 

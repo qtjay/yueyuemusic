@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { Text, TouchableOpacity, View } from 'react-native'
+import { View } from 'react-native'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardPage from '@/screens/Home/Views/Leaderboard'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
@@ -44,13 +44,12 @@ LeaderboardView.displayName = 'LeaderboardView'
 const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`
 
 /** 二级：Square 统一风格的歌曲列表（顶栏返回/内搜索由容器控制） */
-export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, filterText, onBack, onPlaySong }: {
+export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, filterText, onPlaySong }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
   payload: SquareDetailPayload
   filterText: string
-  onBack: () => void
   onPlaySong: () => void
 }) => {
   const [songs, setSongs] = useState<LX.Music.MusicInfoOnline[]>([])
@@ -112,7 +111,6 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
               colors={colors}
               title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
               hint={`${visibleSongs.length} 首`}
-              right={<TouchableOpacity onPress={onBack}><Text style={{ color: colors.accent, fontSize: 13 }}>‹ 返回</Text></TouchableOpacity>}
             />
             <ListActionBar
               colors={colors}
