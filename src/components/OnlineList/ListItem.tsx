@@ -2,13 +2,10 @@ import { memo, useEffect, useState } from 'react'
 import { View, TouchableOpacity, Image } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
-import { Icon } from '@/components/common/Icon'
 import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle, type RowInfo } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
-import { enqueueCacheMusic } from '@/core/musicCache/queue'
-import { toast } from '@/utils/tools'
 
 /** 与 Square 歌曲列表统一行高 */
 export const ITEM_HEIGHT = 60
@@ -79,14 +76,7 @@ export default memo(({ item, index, onPress, onLongPress, selectedList, cachedId
           ) : null
         }
       </TouchableOpacity>
-     {!cached
-       ? <TouchableOpacity onPress={() => {
-           const n = enqueueCacheMusic([item])
-           toast(n ? '已加入缓存队列' : '没有可缓存的歌曲')
-         }} style={styles.moreButton} accessibilityLabel="缓存这首歌">
-           <Icon name="download-2" style={{ color: theme['c-350'] }} size={18} />
-         </TouchableOpacity>
-       : null}
+     {/* 排行榜行右侧不再放下载按钮，缓存状态由副标题蓝色圆勾表示 */}
     </View>
   )
 }, (prevProps, nextProps) => {

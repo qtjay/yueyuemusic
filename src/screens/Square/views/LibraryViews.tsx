@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Animated, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Icon } from '@/components/common/Icon'
 import { playList } from '@/core/player/player'
 import {
   createList,
@@ -53,6 +54,8 @@ const formatSize = (bytes: number) => {
 
 type ListEntry = { id: string, name?: string }
 const BUILTIN_IDS = ['default', 'love', 'temp', 'download']
+/** 歌单行高（dp），用于拖拽排序换算位移到索引 */
+const LIST_ROW_H = 52
 /** 内置 default 列表显示为「未播放历史」 */
 export const DEFAULT_LIST_NAME = '未播放历史'
 const displayListName = (id: string, name?: string) =>
@@ -92,6 +95,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const [editor, setEditor] = useState<{ mode: 'create' | 'rename' | 'songRename', value: string } | null>(null)
   const [batchMode, setBatchMode] = useState(false)
   const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
+  const [editing, setEditing] = useState(false)
   const songs = (getListMusicSync(activeId) ?? []) as LX.Music.MusicInfo[]
   const activeName = displayListName(activeId, lists.find(l => l.id == activeId)?.name)
   const cachedIds = useCachedIds()
@@ -166,6 +170,31 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     if (count) toast('已加入缓存队列')
   }
 
+  // 一级歌单列表：编辑态的批量缓存、全选与拖拽排序
+  const allListsSelected = lists.length > 0 && selected.length == lists.length
+  const selectAllLists = () => setSelected(allListsSelected ? [] : lists.map(l => l.id))
+  const handleCacheSelected = () => {
+    if (!selected.length) { toast('请先选中歌单'); return }
+    const musics = selected.flatMap(id => (getListMusicSync(id) ?? []) as LX.Music.MusicInfo[])
+    const count = enqueueCacheMusic(musics)
+    toast(count ? `已加入缓存队列 ${count} 首` : '没有可缓存的歌曲')
+  }
+  // 拖拽期间不触发任何 setState，避免重渲染重建 PanResponder 导致手势中断
+  const makeDragPan = (id: string) => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderRelease: (_e, g) => {
+      const steps = Math.round(g.dy / LIST_ROW_H)
+      if (!steps) return
+      if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能调整顺序'); return }
+      const userIds = (listState.userList as unknown as ListEntry[]).map(l => l.id)
+      const fromIdx = userIds.indexOf(id)
+      if (fromIdx < 0) { toast('内置歌单不能调整顺序'); return }
+      const pos = Math.max(0, Math.min(userIds.length - 1, fromIdx + steps))
+      void updateUserListPosition(pos, [id])
+    },
+  })
+
   // 批量编辑复用管理态的选中集合，避免两套复选状态
   const songIds = songs.map(m => m.id)
   const batch = {
@@ -208,8 +237,9 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     clearSelection()
   }
 
-  const actions = [
-    { label: level == 'lists' ? '新建' : '＋添加', onPress: handleCreate },
+  // 二级歌曲列表沿用原有管理按钮；一级歌单列表的按钮只在编辑态出现
+  const songActions = [
+    { label: '＋添加', onPress: handleCreate },
     { label: '删除', onPress: handleDelete },
     { label: '改名', onPress: handleRename },
     { label: '↑', onPress: () => handleMove(-1) },
@@ -221,23 +251,49 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
       {level == 'lists'
         ? <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
             <SectionShell colors={colors} style={{ flex: 1, marginBottom: 0, paddingBottom: 0 }}>
-              <SectionHeader colors={colors} title="我的歌单" hint={`${lists.length} 个`} />
-              <View style={styles.actionRow}>
-                {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
-              </View>
+              <SectionHeader
+                colors={colors}
+                title="我的歌单"
+                hint={`${lists.length} 个`}
+                right={<TouchableOpacity onPress={() => {
+                  if (editing) { setEditing(false); clearSelection() } else setEditing(true)
+                }} style={styles.headerBtn}>
+                  <Text style={{ color: colors.accent, fontSize: 14 }}>{editing ? '完成' : '编辑'}</Text>
+                </TouchableOpacity>}
+              />
+              {editing
+                ? <View style={styles.actionRow}>
+                    <TouchableOpacity onPress={selectAllLists} style={styles.selectAllBtn}>
+                      <Icon name={allListsSelected ? 'checkbox-marked' : 'checkbox-blank-outline'} color={colors.accent} size={18} />
+                      <Text style={{ color: colors.text2, fontSize: 13, marginLeft: 6 }}>全选</Text>
+                    </TouchableOpacity>
+                    <ActionButton colors={colors} label="新建" onPress={handleCreate} />
+                    <ActionButton colors={colors} label="删除" onPress={handleDelete} />
+                    <ActionButton colors={colors} label="改名" onPress={handleRename} />
+                    <ActionButton colors={colors} label="缓存" onPress={handleCacheSelected} />
+                  </View>
+                : null}
               <ScrollView style={{ flex: 1 }}>
                 {lists.map(list => {
                   const count = (getListMusicSync(list.id) ?? []).length
                   const active = selected.includes(list.id)
+                  const rowBg = active ? colors.accentSoft : 'transparent'
                   return (
-                    <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: active ? colors.accentSoft : 'transparent' }]}>
-                      <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
-                        <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => openList(list.id)} style={{ flex: 1 }}>
+                    <View key={list.id} style={[styles.manageRow, { borderBottomColor: colors.line, backgroundColor: rowBg }]}>
+                      {editing
+                        ? <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, { borderColor: colors.accent }]}>
+                            <Text style={{ color: colors.accent, fontSize: 12 }}>{active ? '✓' : ''}</Text>
+                          </TouchableOpacity>
+                        : <View style={styles.folderIcon}><Icon name="add_folder" color={colors.text2} size={20} /></View>}
+                      <TouchableOpacity onPress={() => editing ? toggleSelect(list.id) : openList(list.id)} style={{ flex: 1 }}>
                         <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
                         <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
                       </TouchableOpacity>
+                      {editing
+                        ? <View {...makeDragPan(list.id).panHandlers} style={styles.dragHandle}>
+                            <Icon name="menu" color={colors.text2} size={18} />
+                          </View>
+                        : null}
                     </View>
                   )
                 })}
@@ -260,7 +316,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 />
                 {!batchMode
                   ? <View style={styles.actionRow}>
-                      {actions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
+                      {songActions.map(a => <ActionButton key={a.label} colors={colors} label={a.label} onPress={a.onPress} />)}
                     </View>
                   : null}
                 <ListActionBar
@@ -598,6 +654,10 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 13 },
   manageRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingHorizontal: SPACE.sm },
   checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  headerBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: SPACE.sm },
+  selectAllBtn: { flexDirection: 'row', alignItems: 'center', minHeight: 44, marginRight: SPACE.sm, marginBottom: SPACE.sm },
+  folderIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  dragHandle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   manageName: { fontSize: 13, paddingVertical: 10 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
