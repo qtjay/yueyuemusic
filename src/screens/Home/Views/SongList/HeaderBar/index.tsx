@@ -47,10 +47,10 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
 
   return (
     <View style={styles.searchBar}>
+      <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
       <SortTab ref={sortTabRef} onSortChange={onSortChange} />
       <Tag ref={tagRef} onTagChange={onTagChange} />
       <OpenList ref={openListRef} />
-      <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
     </View>
   )
 })

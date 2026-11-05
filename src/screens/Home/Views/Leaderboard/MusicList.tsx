@@ -23,7 +23,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
       listRef.current?.setList([])
       if (listDetailInfo.id == id && listDetailInfo.source == source && listDetailInfo.list.length) {
         requestAnimationFrame(() => {
-          listRef.current?.setList(listDetailInfo.list)
+          listRef.current?.setList(listDetailInfo.list, false, true)
         })
       } else {
         listRef.current?.setStatus('loading')
@@ -33,7 +33,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
           const result = setListDetail(listDetail, id, page)
           if (isUnmountedRef.current) return
           requestAnimationFrame(() => {
-            listRef.current?.setList(result.list)
+            listRef.current?.setList(result.list, false, true)
             listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
           })
         }).catch(() => {
@@ -63,7 +63,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
     getListDetail(boardState.listDetailInfo.id, page, true).then((listDetail) => {
       const result = setListDetail(listDetail, boardState.listDetailInfo.id, page)
       if (isUnmountedRef.current) return
-      listRef.current?.setList(result.list)
+      listRef.current?.setList(result.list, false, true)
       listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
     }).catch(() => {
       if (boardState.listDetailInfo.list.length && page == 1) clearListDetail()
@@ -76,7 +76,7 @@ export default forwardRef<MusicListType, {}>((props, ref) => {
     getListDetail(boardState.listDetailInfo.id, page).then((listDetail) => {
       const result = setListDetail(listDetail, boardState.listDetailInfo.id, page)
       if (isUnmountedRef.current) return
-      listRef.current?.setList(result.list, true)
+      listRef.current?.setList(result.list, true, true)
       listRef.current?.setStatus(boardState.listDetailInfo.maxPage <= page ? 'end' : 'idle')
     }).catch(() => {
       if (boardState.listDetailInfo.list.length && page == 1) clearListDetail()

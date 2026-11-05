@@ -2,32 +2,21 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { View, TouchableOpacity, Image } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
-import Badge, { type BadgeType } from '@/components/common/Badge'
 import { Icon } from '@/components/common/Icon'
 import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
-import { scaleSizeH } from '@/utils/pixelRatio'
-import { LIST_ITEM_HEIGHT } from '@/config/constant'
 import { createStyle, type RowInfo } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 
-export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
+/** 与 Square 歌曲列表统一行高 */
+export const ITEM_HEIGHT = 60
 
 const useQualityTag = (musicInfo: LX.Music.MusicInfoOnline) => {
   const t = useI18n()
-  let info: { type: BadgeType | null, text: string } = { type: null, text: '' }
-  if (musicInfo.meta._qualitys.flac24bit) {
-    info.type = 'secondary'
-    info.text = t('quality_lossless_24bit')
-  } else if (musicInfo.meta._qualitys.flac ?? musicInfo.meta._qualitys.ape) {
-    info.type = 'secondary'
-    info.text = t('quality_lossless')
-  } else if (musicInfo.meta._qualitys['320k']) {
-    info.type = 'tertiary'
-    info.text = t('quality_high_quality')
-  }
-
-  return info
+  if (musicInfo.meta._qualitys.flac24bit) return t('quality_lossless_24bit')
+  if (musicInfo.meta._qualitys.flac ?? musicInfo.meta._qualitys.ape) return t('quality_lossless')
+  if (musicInfo.meta._qualitys['320k']) return t('quality_high_quality')
+  return ''
 }
 
 export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu, selectedList, rowInfo, isShowAlbumName, isShowInterval }: {
@@ -55,7 +44,7 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
       })
     }
   }
-  const tagInfo = useQualityTag(item)
+  const qualityTag = useQualityTag(item)
   const [cover, setCover] = useState(() => getCachedMusicCover(item))
   useEffect(() => {
     if (cover) return
@@ -64,12 +53,11 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
     return () => { cancelled = true }
   }, [item.id, item.source, cover])
 
-  const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
+  const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` - ${item.meta.albumName}` : ''}`
 
   return (
     <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)' }}>
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
-        <Text style={{ ...styles.sn, fontSize: 11 }} color={theme['c-300']}>{index + 1}</Text>
         <View style={styles.cover}>
           {cover
             ? <Image source={{ uri: cover }} style={styles.coverImg} resizeMode="cover" />
@@ -78,8 +66,12 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
         <View style={styles.itemInfo}>
           <Text numberOfLines={1} style={{ fontSize: 13 }}>{item.name}</Text>
           <View style={styles.listItemSingle}>
-            { tagInfo.type ? <Badge type={tagInfo.type}>{tagInfo.text}</Badge> : null }
-            { showSource ? <Badge type="tertiary">{item.source}</Badge> : null }
+            { qualityTag
+              ? <View style={styles.miniTag}><Text style={styles.miniTagText} color={theme['c-primary-font-active']}>{qualityTag}</Text></View>
+              : null }
+            { showSource
+              ? <View style={[styles.miniTag, styles.miniTagSource]}><Text style={styles.miniTagText} color={theme['c-500']}>{item.source}</Text></View>
+              : null }
             <Text style={{ ...styles.listItemSingleText, fontSize: 10 }} color={theme['c-500']} numberOfLines={1}>{singer}</Text>
           </View>
         </View>
@@ -90,7 +82,7 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
         }
       </TouchableOpacity>
      <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton}>
-        <Icon name="dots-vertical" style={{ color: theme['c-350'] }} size={12} />
+        <Icon name="dots-vertical" style={{ color: theme['c-350'] }} size={18} />
       </TouchableOpacity>
     </View>
   )
@@ -111,7 +103,8 @@ const styles = createStyle({
     // paddingLeft: 10,
     paddingRight: 2,
     alignItems: 'center',
-    // borderBottomWidth: BorderWidths.normal,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128,128,128,0.12)',
   },
   listItemLeft: {
     flex: 1,
@@ -120,27 +113,35 @@ const styles = createStyle({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sn: {
-    width: 38,
-    // fontSize: 12,
-    textAlign: 'center',
-    // backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingLeft: 3,
-    paddingRight: 3,
-  },
   cover: {
-    width: 42,
-    height: 42,
-    borderRadius: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     backgroundColor: 'rgba(128,128,128,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 12,
   },
   coverImg: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+  },
+  miniTag: {
     borderRadius: 4,
+    backgroundColor: 'rgba(49,194,124,0.14)',
+    marginRight: 4,
+    alignSelf: 'center',
+  },
+  miniTagSource: {
+    backgroundColor: 'rgba(128,128,128,0.12)',
+  },
+  miniTagText: {
+    fontSize: 9,
+    fontWeight: '500',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: 'hidden',
   },
   itemInfo: {
     flexGrow: 1,
@@ -187,8 +188,10 @@ const styles = createStyle({
   },
   moreButton: {
     height: '80%',
-    paddingLeft: 16,
-    paddingRight: 16,
+    minWidth: 44,
+    alignItems: 'center',
+    paddingLeft: 8,
+    paddingRight: 8,
     // paddingTop: 10,
     // paddingBottom: 10,
     // backgroundColor: 'rgba(0,0,0,0.2)',

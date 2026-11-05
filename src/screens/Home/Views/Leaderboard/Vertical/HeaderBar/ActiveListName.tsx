@@ -34,10 +34,14 @@ const styles = createStyle({
   currentList: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: 36,
     paddingRight: 2,
-    // height: 36,
+    paddingLeft: 12,
+    marginRight: 6,
+    marginVertical: 4,
     alignItems: 'center',
-    // backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 999,
+    backgroundColor: 'rgba(128,128,128,0.08)',
   },
   currentListIcon: {
     paddingLeft: 15,

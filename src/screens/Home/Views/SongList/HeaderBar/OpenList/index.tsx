@@ -59,10 +59,14 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
 
 const styles = createStyle({
   button: {
-    // backgroundColor: '#ccc',
+    minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
     paddingLeft: 12,
     paddingRight: 12,
+    marginRight: 6,
+    marginVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(128,128,128,0.08)',
   },
 })

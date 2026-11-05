@@ -40,6 +40,11 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
 
 const styles = createStyle({
   selector: {
-    // width: 86,
+    minHeight: 36,
+    justifyContent: 'center',
+    borderRadius: 999,
+    backgroundColor: 'rgba(128,128,128,0.08)',
+    marginRight: 6,
+    marginVertical: 4,
   },
 })
