@@ -170,9 +170,7 @@ export default ({ componentId }: { componentId: string }) => {
             : renderView()}
         </View>
 
-        {!nowPlaying
-          ? <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
-          : null}
+        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
       </View>
 
       {!isTablet && drawerOpen

@@ -1,7 +1,9 @@
 import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
-import { ActivityIndicator, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type GestureResponderEvent } from 'react-native'
 import { Icon } from '@/components/common/Icon'
-import { playNext, playPrev, togglePlay } from '@/core/player/player'
+import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
+import { LIST_IDS } from '@/config/constant'
+import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import { addListMusics } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
@@ -418,38 +420,103 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   const name = music?.name ?? '暂无播放'
   const singer = music?.singer ?? '点一下开始听歌'
   const progress = Math.max(0, Math.min(1, playerState.progress.progress || 0))
+  const [seeking, setSeeking] = useState<number | null>(null)
+  const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
+  const trackWidth = useRef(1)
+  const displayProgress = seeking ?? progress
+  const collected = !!music && getListMusicSync(LIST_IDS.LOVE).some(m => m.id == music.id)
+
+  const ratioOf = (evt: GestureResponderEvent) => {
+    const x = evt.nativeEvent.locationX
+    return Math.max(0, Math.min(1, trackWidth.current > 1 ? x / trackWidth.current : 0))
+  }
+  const pan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: evt => setSeeking(ratioOf(evt)),
+    onPanResponderMove: evt => setSeeking(ratioOf(evt)),
+    onPanResponderRelease: evt => {
+      const ratio = ratioOf(evt)
+      setSeeking(null)
+      const maxTime = playerState.progress.maxPlayTime
+      if (maxTime > 0) global.app_event.setProgress(Math.round(ratio * maxTime))
+    },
+    onPanResponderTerminate: () => setSeeking(null),
+  })).current
+
+  const openAddToList = () => {
+    if (!music) return
+    const target = 'progress' in music
+      ? (music as unknown as { metadata: { musicInfo: LX.Music.MusicInfo } }).metadata.musicInfo
+      : music
+    setAddMusics([target])
+  }
+
   return (
     <View style={[styles.miniPlayer, {
-      height: PLAYER_H,
+      height: PLAYER_H + 14,
       backgroundColor: colors.header,
       borderTopColor: colors.line,
+      flexDirection: 'column',
+      justifyContent: 'center',
+      paddingHorizontal: 0,
     }]}>
-      <View style={[styles.miniProgressTrack, { backgroundColor: colors.surface3 }]}>
-        <View style={[styles.miniProgressBar, { backgroundColor: colors.accent, width: `${progress * 100}%` }]} />
-      </View>
-      <TouchableOpacity onPress={onOpen} style={styles.miniInfo}>
-        <View style={[styles.miniCover, { backgroundColor: colors.accentSoft }]}>
-          <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
+      <View style={styles.miniSeekRow}>
+        <Text style={[styles.miniTime, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr}</Text>
+        <View
+          onLayout={e => { trackWidth.current = e.nativeEvent.layout.width || 1 }}
+          {...pan.panHandlers}
+          style={styles.miniSeekTrack}
+        >
+          <View style={[styles.miniSeekRail, { backgroundColor: colors.surface3 }]}>
+            <View style={[styles.miniProgressBar, { backgroundColor: colors.accent, width: `${displayProgress * 100}%` }]} />
+          </View>
+          <View style={[styles.miniSeekThumb, { left: `${displayProgress * 100}%`, backgroundColor: colors.accent }]} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[styles.miniName, { color: colors.text }]}>{name}</Text>
-          <Text numberOfLines={1} style={[styles.miniSub, { color: colors.text3 }]}>{singer}</Text>
-        </View>
-      </TouchableOpacity>
-      <View style={styles.miniControls}>
-        {isTablet
-          ? <TouchableOpacity onPress={() => { void playPrev() }} style={styles.miniBtn}>
-              <Icon name="prevMusic" color={colors.text2} size={20} />
-            </TouchableOpacity>
-          : null}
-        <TouchableOpacity onPress={togglePlay} style={[styles.miniPlayBtn, { backgroundColor: colors.accent }]}>
-          <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={20} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => { void playNext(true) }} style={styles.miniBtn}>
-          <Icon name="nextMusic" color={colors.text2} size={20} />
-        </TouchableOpacity>
+        <Text style={[styles.miniTime, { color: colors.text3 }]}>{playerState.progress.maxPlayTimeStr}</Text>
       </View>
-      <Text style={[styles.miniTime, { color: colors.text3 }]}>{playerState.progress.nowPlayTimeStr} / {playerState.progress.maxPlayTimeStr}</Text>
+
+      <View style={styles.miniMainRow}>
+        <TouchableOpacity onPress={onOpen} style={styles.miniInfo}>
+          <View style={[styles.miniCover, { backgroundColor: colors.accentSoft }]}>
+            <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={[styles.miniName, { color: colors.text }]}>{name}</Text>
+            <Text numberOfLines={1} style={[styles.miniSub, { color: colors.text3 }]}>{singer}</Text>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.miniControls}>
+          <TouchableOpacity
+            onPress={() => { if (!music) return; collected ? uncollectMusic() : collectMusic() }}
+            style={styles.miniBtn}
+            accessibilityLabel={collected ? '取消收藏' : '收藏到我的收藏'}
+          >
+            <Icon name="love" color={collected ? colors.accent : colors.text3} size={19} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
+            <Icon name="add-music" color={colors.text2} size={19} />
+          </TouchableOpacity>
+          {isTablet
+            ? <TouchableOpacity onPress={() => { void playPrev() }} style={styles.miniBtn}>
+                <Icon name="prevMusic" color={colors.text2} size={20} />
+              </TouchableOpacity>
+            : null}
+          <TouchableOpacity onPress={togglePlay} style={[styles.miniPlayBtn, { backgroundColor: colors.accent }]}>
+            <Icon name={playerState.isPlay ? 'pause' : 'play'} color="#fff" size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { void playNext(true) }} style={styles.miniBtn}>
+            <Icon name="nextMusic" color={colors.text2} size={20} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <AddToListModal
+        colors={colors}
+        visible={addMusics.length > 0}
+        musics={addMusics}
+        onClose={() => setAddMusics([])}
+      />
     </View>
   )
 })
@@ -518,7 +585,11 @@ const styles = StyleSheet.create({
   navLabel: { fontSize: 14, marginLeft: SPACE.md },
   sideFooter: { fontSize: 10, padding: SPACE.md },
   miniPlayer: { borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.lg, position: 'relative', flexShrink: 0 },
-  miniProgressTrack: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  miniSeekRow: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: SPACE.lg },
+  miniSeekTrack: { flex: 1, height: 18, justifyContent: 'center', marginHorizontal: SPACE.sm },
+  miniSeekRail: { height: 3, borderRadius: 2, overflow: 'hidden', width: '100%' },
+  miniSeekThumb: { position: 'absolute', width: 10, height: 10, borderRadius: 5, marginLeft: -5 },
+  miniMainRow: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: SPACE.lg },
   miniProgressBar: { height: 3 },
   miniInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   miniCover: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
@@ -527,5 +598,5 @@ const styles = StyleSheet.create({
   miniControls: { flexDirection: 'row', alignItems: 'center' },
   miniBtn: { paddingHorizontal: SPACE.md },
   miniPlayBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  miniTime: { fontSize: 11, marginLeft: SPACE.lg },
+  miniTime: { fontSize: 11 },
 })
