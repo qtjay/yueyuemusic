@@ -54,7 +54,7 @@ export const SectionHeader = memo(({ colors, title, hint, right }: {
   <View style={styles.sectionHeader}>
     <View style={{ flexDirection: 'row', alignItems: 'baseline', flex: 1, minWidth: 0 }}>
       <Text numberOfLines={1} style={[styles.sectionTitle, { color: colors.text, flexShrink: 1 }]}>{title}</Text>
-      {hint ? <Text numberOfLines={1} style={[styles.sectionHint, { color: colors.text3, flexShrink: 1 }]}>　{hint}</Text> : null}
+      {hint ? <Text style={[styles.sectionHint, { color: colors.text3, flexShrink: 0 }]}>　{hint}</Text> : null}
     </View>
     {right ? <View style={styles.sectionHeaderRight}>{right}</View> : null}
   </View>
