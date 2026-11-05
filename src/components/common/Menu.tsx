@@ -1,5 +1,5 @@
 import { useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
-import { View, Animated, TouchableHighlight, Dimensions, PixelRatio } from 'react-native'
+import { View, Animated, TouchableHighlight, Dimensions } from 'react-native'
 import { useWindowSize } from '@/utils/hooks'
 
 import Modal, { type ModalType } from './Modal'
@@ -33,6 +33,7 @@ const styles = createStyle({
     borderRadius: 2,
     backgroundColor: 'white',
     elevation: 3,
+    overflow: 'hidden',
   },
   menuItem: {
     paddingLeft: 10,
@@ -89,17 +90,14 @@ const Menu = ({
   }, [menuSize, width, height])
 
   const menuStyle = useMemo(() => {
-    // getSize() 单位不稳定（dp/px 取决于 native 回调），统一用 Dimensions 实时换算成 px
+    // measure() 与 scaleSizeH() 都是 dp，全程用 dp，不做 px 换算
     const win = Dimensions.get('window')
-    const ratio = win.scale || PixelRatio.get()
-    const screenW = win.width * ratio
-    const screenH = win.height * ratio
-    const bottomInset = 110 * ratio
+    const screenW = win.width
+    const screenH = win.height
+    const bottomInset = 100   // 预留迷你播放条（约 96dp）
     const bottomHeight = Math.max(0, screenH - buttonPosition.y - buttonPosition.h - bottomInset)
-    const hardMax = screenH * 0.5   // 半屏硬上限，防止任何单位误差导致菜单压住迷你播放条
+    const hardMax = screenH * 0.5
     let menuHeight = menus.length * menuItemStyle.height
-    const topHeight = Math.max(0, buttonPosition.y - 20)
-    if (menuHeight > topHeight && menuHeight > bottomHeight) menuHeight = Math.max(topHeight, bottomHeight)
     menuHeight = Math.min(menuHeight, Math.max(menuItemStyle.height, Math.min(bottomHeight, hardMax)))
     if (forceDown) menuHeight = Math.min(menuHeight, bottomHeight)
 
@@ -138,7 +136,7 @@ const Menu = ({
   // console.log(menuItemStyle)
   return (
     <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'] }} onStartShouldSetResponder={() => true}>
-      <Animated.ScrollView keyboardShouldPersistTaps={'always'}>
+      <Animated.ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps={'always'}>
         {
           menus.map((menu, index) => (
             menu.disabled
