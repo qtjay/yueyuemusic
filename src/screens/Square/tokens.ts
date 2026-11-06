@@ -40,6 +40,25 @@ export type SquareColors = typeof COLOR.light | typeof COLOR.dark
 
 export const RADIUS = { sm: 10, md: 14, lg: 18, pill: 999 } as const
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const
+
+/**
+ * 全局默认控件尺寸风格（项目约定）：
+ * 今后所有新增/修改的按钮、选择框、图标按钮、拖拽手柄，
+ * 只要需求未特别说明尺寸，一律套用本常量，不得另写死值。
+ */
+export const UI = {
+  buttonMinHeight: 32,
+  buttonFontSize: 12,
+  buttonPaddingH: SPACE.xs,
+  buttonRadius: RADIUS.sm,
+  buttonGap: SPACE.xs,
+  checkboxSize: 18,
+  checkboxRadius: 9,
+  iconButtonSize: 32,
+  dragHandleSize: 44,
+  headerFontSize: 14,
+} as const
+
 export const SIDEBAR_W = 200
 export const PLAYER_H = 84
 export const TABLET_BREAKPOINT = 600
