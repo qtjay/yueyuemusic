@@ -355,7 +355,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
       keyExtractor={(item, index) => `${item.source}_${item.id}_${index}`}
       ListHeaderComponent={header}
       renderItem={({ item, index }) => (
-        <View style={[
+        <View collapsable={false} style={[
           styles.pagedRow,
           rowBorder,
           { backgroundColor: colors.surface },

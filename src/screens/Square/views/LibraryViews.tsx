@@ -218,13 +218,17 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     if (cached) return cached
     const offset = getSongDragOffset(id)
     const responder = PanResponder.create({
+      // FlatList 场景下冒泡与 capture 都声明，避免中间层截胡
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
       onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: () => { setDraggingId(id); offset.setValue(0) },
+      onPanResponderGrant: () => { console.log('[song-drag] grant', id); setDraggingId(id); offset.setValue(0) },
       onPanResponderMove: (_e, g) => { offset.setValue(g.dy) },
       onPanResponderRelease: (_e, g) => {
+        console.log('[song-drag] release', id, g.dy)
         setDraggingId(null)
         offset.setValue(0)
         let steps = Math.round(g.dy / SONG_ROW_H)
