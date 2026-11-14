@@ -10,10 +10,11 @@ import { playList } from '@/core/player/player'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
-import { emitLeaderboardBatch, setLeaderboardSongsHandler, type SquareDetailPayload } from '@/core/squareBridge'
+import { setLeaderboardSongsHandler, type SquareDetailPayload } from '@/core/squareBridge'
 import boardState from '@/store/leaderboard/state'
 import {
   AddToListModal,
+  BatchEditButton,
   ListActionBar,
   PagedSongList,
   SectionHeader,
@@ -22,7 +23,7 @@ import {
   useBatchSelection,
   useCachedIds,
 } from '../components'
-import { RADIUS, SPACE, type SquareColors } from '../tokens'
+import { RADIUS, SPACE, useLayoutMode, type SquareColors } from '../tokens'
 
 /** 一级：保留原有专辑网格、最新/最热等分类筛选 */
 export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
@@ -36,6 +37,10 @@ SonglistView.displayName = 'SonglistView'
 
 export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
   const [songs, setSongs] = useState<LX.Music.MusicInfoOnline[]>([])
+  const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
+  const cachedIds = useCachedIds()
+  const batch = useBatchSelection()
+  const { isTablet, isCompact } = useLayoutMode()
   useEffect(() => {
     // 子组件首帧可能早于注册，先用当前榜单数据兜底
     setSongs(boardState.listDetailInfo.list)
@@ -60,6 +65,58 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
   const durationText = totalSec >= 3600
     ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
     : `${Math.floor(totalSec / 60)} 分钟`
+  const ids = songs.map(rowKey)
+  const getSelected = () => songs.filter((m, i) => batch.selected.includes(rowKey(m, i)))
+
+  // 编辑态与搜索结果完全同款（ListActionBar + TrackRow 选择框），不再跳旧版 MusicList 多选界面
+  if (batch.batchMode) {
+    return (
+      <View style={{ flex: 1 }}>
+        <PagedSongList
+          colors={colors}
+          songs={songs}
+          resetKey="board_batch"
+          expanded
+          header={
+            <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
+              <SectionHeader colors={colors} title="排行榜" hint={`${songs.length} 首`} />
+              <ListActionBar
+                colors={colors}
+                batch={batch}
+                ids={ids}
+                songs={songs}
+                onPlayAll={playAll}
+                onCacheAll={cacheAll}
+                getSelected={getSelected}
+                onAddToList={musics => setAddMusics(musics)}
+              />
+            </SectionShell>
+          }
+          renderRow={(music, index) => (
+            <TrackRow
+              colors={colors}
+              index={index}
+              musicInfo={music}
+              isTablet={isTablet}
+              isCompact={isCompact}
+              textSize="small"
+              onPress={() => { handlePlay(music) }}
+              cached={cachedIds.has(music.id)}
+              batchMode
+              selected={batch.selected.includes(rowKey(music, index))}
+              onToggleSelect={() => batch.toggle(rowKey(music, index))}
+            />
+          )}
+        />
+        <AddToListModal
+          colors={colors}
+          visible={addMusics.length > 0}
+          musics={addMusics}
+          onClose={() => { setAddMusics([]); batch.exit() }}
+        />
+      </View>
+    )
+  }
 
   return (
     <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
@@ -76,9 +133,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               <TouchableOpacity onPress={cacheAll} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="缓存全部">
                 <Icon name="download-2" color={colors.text2} size={20} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={emitLeaderboardBatch} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="批量编辑">
-                <Icon name="menu" color={colors.text2} size={20} />
-              </TouchableOpacity>
+              <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
           </View>
           <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2 }}>

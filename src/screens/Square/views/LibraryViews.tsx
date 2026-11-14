@@ -42,7 +42,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { AddToListModal, Chip, Empty, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
+import { AddToListModal, BatchEditButton, Chip, Empty, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -297,11 +297,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 colors={colors}
                 title="我的歌单"
                 hint={`${lists.length} 个`}
-                right={<TouchableOpacity onPress={() => {
-                  if (editing) { setEditing(false); clearSelection() } else setEditing(true)
-                }} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
-                  <Text style={{ color: colors.accent, fontSize: 14 }}>{editing ? '完成' : '编辑'}</Text>
-                </TouchableOpacity>}
+                right={editing
+                  ? <TouchableOpacity onPress={() => { setEditing(false); clearSelection() }} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
+                      <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
+                    </TouchableOpacity>
+                  : <BatchEditButton colors={colors} onPress={() => setEditing(true)} />}
               />
               {editing
                 ? <View style={styles.editActionRow}>
@@ -378,9 +378,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                     <TouchableOpacity onPress={backToLists} style={styles.songBackBtn}>
                       <Text style={{ color: colors.accent, fontSize: UI.buttonFontSize + 1 }}>‹ 返回歌单</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => batchMode ? batch.exit() : batch.setBatchMode(true)} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
-                      <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>{batchMode ? '完成' : '编辑'}</Text>
-                    </TouchableOpacity>
+                    {batchMode
+                      ? <TouchableOpacity onPress={batch.exit} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
+                          <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
+                        </TouchableOpacity>
+                      : <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />}
                   </View>}
                 />
                 {batchMode

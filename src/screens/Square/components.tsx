@@ -209,6 +209,17 @@ export const useBatchSelection = () => {
 
 type BatchState = ReturnType<typeof useBatchSelection>
 
+/** 全站统一的「进入批量编辑」图标按钮（搜索结果为基线样式） */
+export const BatchEditButton = memo(({ colors, onPress }: {
+  colors: SquareColors
+  onPress: () => void
+}) => (
+  <TouchableOpacity onPress={onPress} style={styles.iconBtn} accessibilityLabel="批量编辑">
+    <Icon name="menu" color={colors.text2} size={20} />
+  </TouchableOpacity>
+))
+BatchEditButton.displayName = 'BatchEditButton'
+
 /** 网易云式列表操作条：播放全部 / 缓存全部 / 批量编辑 → 全选 / 反选 / 加入歌单 / 缓存所选 */
 export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, onCacheAll, getSelected, onAddToList, showDelete, onDelete }: {
   colors: SquareColors
@@ -268,9 +279,7 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
               <TouchableOpacity onPress={onCacheAll} style={styles.iconBtn} accessibilityLabel="缓存全部">
                 <Icon name="download-2" color={colors.text2} size={20} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => batch.setBatchMode(true)} style={styles.iconBtn} accessibilityLabel="批量编辑">
-                <Icon name="menu" color={colors.text2} size={20} />
-              </TouchableOpacity>
+              <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
             </View>
             <Text numberOfLines={1} style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
