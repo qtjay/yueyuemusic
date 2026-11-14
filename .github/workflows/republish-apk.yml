@@ -1,0 +1,42 @@
+name: Republish APK to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: '源 CI run id'
+        required: true
+      artifact_name:
+        description: 'artifact 名称'
+        required: true
+        default: 'yueyue-music-apk-70'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  republish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载源 artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ inputs.artifact_name }}
+          path: apks
+
+      - name: 列出文件
+        run: find apks -type f -exec ls -lh {} \;
+
+      - name: 发布到 latest Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: qtjay/yueyuemusic
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          files=$(find apks -type f -name '*.apk')
+          gh release create latest $files \
+            --title "APK ${{ inputs.artifact_name }}" \
+            --notes "Republished from CI run ${{ inputs.run_id }} (${{ github.sha }})"
