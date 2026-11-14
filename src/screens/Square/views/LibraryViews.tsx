@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playList } from '@/core/player/player'
@@ -676,7 +676,25 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
 })
 SettingView.displayName = 'SettingView'
 
-/** 正在播放：下半圆旋转专辑（直边贴顶）+ 歌词；顶部无工具栏、无进度/控制 */
+/** 解析 LRC 时间轴，同一行多时间标签会展开成多行 */
+const parseLrc = (lrc?: string | null): Array<{ time: number, text: string }> => {
+  if (!lrc) return []
+  const lines: Array<{ time: number, text: string }> = []
+  const re = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g
+  for (const raw of lrc.split('\n')) {
+    const text = raw.replace(/\[[^\]]*\]/g, '').trim()
+    if (!text) continue
+    re.lastIndex = 0
+    let m: RegExpExecArray | null
+    while ((m = re.exec(raw)) !== null) {
+      const frac = m[3] ? Number(`0.${m[3]}`) : 0
+      lines.push({ time: Number(m[1]) * 60 + Number(m[2]) + frac, text })
+    }
+  }
+  return lines.sort((a, b) => a.time - b.time)
+}
+
+/** 正在播放：下半圆旋转专辑（直边贴顶）+ 逐行歌词；顶部无工具栏、无进度/控制 */
 export const NowPlayingView = memo(({ colors, onBack }: {
   colors: SquareColors
   onBack: () => void
@@ -693,8 +711,27 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   }, [playerState.isPlay, rotate])
 
   const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
-  const lyric = playerState.lastLyric ?? '暂无歌词，换一首支持歌词的歌曲试试。'
-  const picUrl = (music?.meta as Record<string, any> | undefined)?.picUrl as string | undefined
+  // 歌词取自播放器已加载的 LRC（lastLyric 只是桌面歌词单句，通常为空）
+  const lines = useMemo(
+    () => parseLrc(playerState.musicInfo.lrc || playerState.musicInfo.rawlrc),
+    [playerState.musicInfo.lrc, playerState.musicInfo.rawlrc],
+  )
+  const nowPlayTime = playerState.progress.nowPlayTime
+  const activeLine = useMemo(() => {
+    let idx = -1
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].time <= nowPlayTime) idx = i
+      else break
+    }
+    return idx
+  }, [lines, nowPlayTime])
+  const lyricScroll = useRef<ScrollView>(null)
+  useEffect(() => {
+    if (activeLine < 0) return
+    lyricScroll.current?.scrollTo({ y: Math.max(0, activeLine * 34 - 72), animated: true })
+  }, [activeLine])
+  const picUrl = playerState.musicInfo.pic
+    ?? ((music?.meta as Record<string, any> | undefined)?.picUrl as string | undefined)
 
   return (
     <View style={[styles.npContainer, { backgroundColor: colors.bg }]}>
@@ -712,8 +749,15 @@ export const NowPlayingView = memo(({ colors, onBack }: {
       </TouchableOpacity>
       <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? '暂无播放'}</Text>
       <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
-      <ScrollView style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
-        <Text style={[styles.npLyricText, { color: colors.text2 }]}>{lyric}</Text>
+      <ScrollView ref={lyricScroll} style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
+        {lines.length
+          ? lines.map((line, i) => (
+              <Text key={`${line.time}_${i}`} style={[styles.npLyricText, {
+                color: i == activeLine ? colors.accent : colors.text2,
+                fontWeight: i == activeLine ? '600' : '400',
+              }]}>{line.text}</Text>
+            ))
+          : <Text style={[styles.npLyricText, { color: colors.text2 }]}>暂无歌词，换一首支持歌词的歌曲试试。</Text>}
       </ScrollView>
     </View>
   )
@@ -775,6 +819,6 @@ const styles = StyleSheet.create({
   npName: { fontSize: 22, fontWeight: '600', marginTop: SPACE.md, paddingHorizontal: SPACE.lg, textAlign: 'center' },
   npSinger: { fontSize: 13, marginTop: SPACE.sm, paddingHorizontal: SPACE.lg, textAlign: 'center' },
   npLyric: { flex: 1, width: '100%', marginTop: SPACE.xl, paddingHorizontal: SPACE.xl },
-  npLyricText: { fontSize: 14, textAlign: 'center', lineHeight: 26 },
+  npLyricText: { fontSize: 14, textAlign: 'center', lineHeight: 26, marginBottom: 8 },
   backBtn: { minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: SPACE.lg, justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, marginBottom: SPACE.lg },
 })

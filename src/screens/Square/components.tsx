@@ -12,7 +12,7 @@ import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
-import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, type SquareColors } from './tokens'
+import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, UI, type SquareColors } from './tokens'
 
 /** 已缓存歌曲 id 集合：缓存写入/删除后自动刷新，供列表蓝色勾使用 */
 export const useCachedIds = () => {
@@ -446,7 +446,19 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   const progress = Math.max(0, Math.min(1, playerState.progress.progress || 0))
   const [seeking, setSeeking] = useState<number | null>(null)
   const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
+  const [cover, setCover] = useState('')
   const trackWidth = useRef(1)
+  const musicKey = music ? `${music.source}_${music.id}` : ''
+  useEffect(() => {
+    let cancelled = false
+    // 播放器已加载的封面优先；在线歌曲再退回封面缓存/异步加载
+    const pic = playerState.musicInfo.pic
+    if (pic) { setCover(pic); return }
+    if (!music) { setCover(''); return }
+    setCover(getCachedMusicCover(music as LX.Music.MusicInfoOnline))
+    void loadMusicCover(music as LX.Music.MusicInfoOnline).then(url => { if (!cancelled) setCover(url) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [musicKey, playerState.musicInfo.pic])
   const displayProgress = seeking ?? progress
   const collected = !!music && getListMusicSync(LIST_IDS.LOVE).some(m => m.id == music.id)
 
@@ -502,8 +514,10 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
 
       <View style={styles.miniMainRow}>
         <TouchableOpacity onPress={onOpen} style={styles.miniInfo}>
-          <View style={[styles.miniCover, { backgroundColor: colors.accentSoft }]}>
-            <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>
+          <View style={[styles.miniCover, { backgroundColor: colors.accentSoft, overflow: 'hidden' }]}>
+            {cover
+              ? <Image source={{ uri: cover }} style={styles.miniCoverImg} resizeMode="cover" />
+              : <Text style={{ color: colors.accent, fontSize: 18 }}>♪</Text>}
           </View>
           <View style={{ flex: 1 }}>
             <Text numberOfLines={1} style={[styles.miniName, { color: colors.text }]}>{name}</Text>
@@ -592,8 +606,8 @@ const styles = StyleSheet.create({
   pagedEmpty: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.lg },
   loadMore: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACE.md, borderWidth: 1, borderTopWidth: 0 },
   trackCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
-  actionBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 6, marginRight: SPACE.sm, marginBottom: SPACE.sm },
-  actionBtnText: { fontSize: 13 },
+  actionBtn: { minHeight: UI.buttonMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: UI.buttonRadius, paddingHorizontal: UI.buttonPaddingH, paddingVertical: 0, marginRight: UI.buttonGap, marginBottom: UI.buttonGap },
+  actionBtnText: { fontSize: UI.buttonFontSize },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
@@ -620,6 +634,7 @@ const styles = StyleSheet.create({
   miniProgressBar: { height: 3 },
   miniInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   miniCover: { width: 44, height: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  miniCoverImg: { width: '100%', height: '100%', borderRadius: RADIUS.sm },
   miniName: { fontSize: 14, fontWeight: '500' },
   miniSub: { fontSize: 11, marginTop: 3 },
   miniControls: { flexDirection: 'row', alignItems: 'center' },
