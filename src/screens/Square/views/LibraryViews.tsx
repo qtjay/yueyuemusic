@@ -42,7 +42,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { AddToListModal, BatchEditButton, Chip, Empty, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
+import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -72,12 +72,16 @@ const QUEUE_STATUS_TEXT: Record<string, string> = {
 }
 
 /** 我的歌单：两级页面（歌单列表 → 歌曲列表），编辑态统一套用 UI 全局默认尺寸 */
-export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoDiscover }: {
+export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoDiscover, onLevelChange, registerBack }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
   onPlaySong: () => void
   onGoDiscover: () => void
+  /** 供 Square 顶栏决定左上角显示 ☰ 还是 ‹ */
+  onLevelChange?: (level: 'lists' | 'songs') => void
+  /** 把「返回歌单」交给 Square 顶栏左上角调用 */
+  registerBack?: (fn: (() => void) | null) => void
 }) => {
   usePlayerTick()
   const lists = listState.allList as unknown as ListEntry[]
@@ -97,7 +101,12 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     setSelected(s => s.includes(id) ? s.filter(x => x != id) : [...s, id])
 
   const openList = (id: string) => { setActiveId(id); setLevel('songs'); clearSelection() }
-  const backToLists = () => { setLevel('lists'); clearSelection() }
+  const backToLists = useCallback(() => { setLevel('lists'); setSelected([]); setBatchMode(false) }, [])
+  useEffect(() => { onLevelChange?.(level) }, [level, onLevelChange])
+  useEffect(() => {
+    registerBack?.(backToLists)
+    return () => registerBack?.(null)
+  }, [backToLists, registerBack])
 
   const handleCreate = () => {
     if (level == 'songs') {
@@ -374,16 +383,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                   colors={colors}
                   title={activeName}
                   hint={`${songs.length} 首`}
-                  right={<View style={styles.headerRight}>
-                    <TouchableOpacity onPress={backToLists} style={styles.songBackBtn}>
-                      <Text style={{ color: colors.accent, fontSize: UI.buttonFontSize + 1 }}>‹ 返回歌单</Text>
-                    </TouchableOpacity>
-                    {batchMode
-                      ? <TouchableOpacity onPress={batch.exit} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
-                          <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
-                        </TouchableOpacity>
-                      : <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />}
-                  </View>}
+                  right={batchMode
+                    ? <TouchableOpacity onPress={batch.exit} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
+                        <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
+                      </TouchableOpacity>
+                    : <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />}
                 />
                 {batchMode
                   ? <View style={styles.editActionRow}>
@@ -400,13 +404,15 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                         </TouchableOpacity>
                       ))}
                     </View>
-                  : <TouchableOpacity onPress={playAll} style={styles.playAllRow}>
-                      <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}><Text style={styles.playAllIconText}>▶</Text></View>
-                      <View>
-                        <Text style={{ color: colors.text, fontSize: 14 }}>播放全部</Text>
-                        <Text style={{ color: colors.text3, fontSize: UI.buttonFontSize }}>{songs.length} 首</Text>
-                      </View>
-                    </TouchableOpacity>}
+                  : <View style={styles.playAllBlock}>
+                      <TouchableOpacity onPress={playAll} style={styles.playAllRow}>
+                        <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}><Text style={styles.playAllIconText}>▶</Text></View>
+                        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>播放全部</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.playAllSubSmall, { color: colors.text3 }]}>
+                        {songs.length} 首 · {getSongsDurationText(songs)}
+                      </Text>
+                    </View>}
               </SectionShell>
             }
             renderRow={(music, index) => {
@@ -490,13 +496,25 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
 })
 MyListView.displayName = 'MyListView'
 
-/** 缓存管理（容量自定义 + 按歌单分类删除） */
+/** 缓存容量上限预设（MB），最后一项走手填 */
+const CAPACITY_OPTIONS: Array<{ label: string, mb: number }> = [
+  { label: '1G', mb: 1024 },
+  { label: '2G', mb: 2048 },
+  { label: '5G', mb: 5120 },
+  { label: '10G', mb: 10240 },
+  { label: '20G', mb: 20480 },
+  { label: '40G', mb: 40960 },
+]
+
+/** 缓存管理（容量下拉预设 + 其他手填 + 按歌单分类删除） */
 export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
   const autoCache = useSettingValue('cache.auto')
   const [groups, setGroups] = useState<CacheGroup[]>([])
   const [stats, setStats] = useState({ count: 0, totalSize: 0 })
   const [maxSize, setMaxSize] = useState('1024')
   const [draft, setDraft] = useState('1024')
+  const [capacityOpen, setCapacityOpen] = useState(false)
+  const [customMode, setCustomMode] = useState(false)
   const [nameMap, setNameMap] = useState<Record<string, string>>({ default: DEFAULT_LIST_NAME, love: '我的收藏' })
   const [queue, setQueue] = useState<CacheQueueState>(getCacheQueueState)
 
@@ -514,15 +532,25 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
   useEffect(() => { void load() }, [load])
   useEffect(() => subscribeCacheQueue(setQueue), [])
 
-  const saveMax = () => {
-    const mb = parseInt(draft)
-    if (Number.isNaN(mb) || mb < 16 || mb > 10240) {
-      toast('请输入 16 ~ 10240 之间的 MB 数')
+  const applyMax = (mb: number) => {
+    if (!Number.isFinite(mb) || mb < 16 || mb > 102400) {
+      toast('请输入 16 ~ 102400 之间的 MB 数')
       setDraft(maxSize)
       return
     }
-    void setCacheMaxSize(mb).then(() => { setMaxSize(String(mb)); toast(`缓存上限已设为 ${mb} MB`); void load() })
+    void setCacheMaxSize(mb).then(() => {
+      setMaxSize(String(mb))
+      setDraft(String(mb))
+      setCapacityOpen(false)
+      setCustomMode(false)
+      toast(`缓存上限已设为 ${mb >= 1024 && mb % 1024 == 0 ? `${mb / 1024}G` : `${mb} MB`}`)
+      void load()
+    })
   }
+  const saveMax = () => applyMax(parseInt(draft))
+  const currentMb = parseInt(maxSize)
+  const capacityLabel = CAPACITY_OPTIONS.find(o => o.mb == currentMb)?.label
+    ?? (customMode ? '其他（手填）' : `${maxSize} MB`)
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
@@ -566,21 +594,47 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
           <Switch value={autoCache} onValueChange={v => updateSetting({ 'cache.auto': v })} />
         </View>
         <View style={styles.settingRow}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>容量上限（MB）</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
-            value={draft}
-            onChangeText={setDraft}
-            onBlur={saveMax}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-          <TouchableOpacity onPress={saveMax} style={[styles.smallBtn, { backgroundColor: colors.accent }]}>
-            <Text style={styles.smallBtnText}>保存</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>容量上限</Text>
+          <TouchableOpacity onPress={() => setCapacityOpen(true)} style={[styles.input, { borderColor: colors.line, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ color: colors.text, fontSize: 14 }}>{capacityLabel}</Text>
           </TouchableOpacity>
         </View>
+        {customMode
+          ? <View style={styles.settingRow}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>自定义（MB）</Text>
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
+                value={draft}
+                onChangeText={setDraft}
+                keyboardType="numeric"
+                maxLength={6}
+              />
+              <TouchableOpacity onPress={saveMax} style={[styles.smallBtn, { backgroundColor: colors.accent }]}>
+                <Text style={styles.smallBtnText}>保存</Text>
+              </TouchableOpacity>
+            </View>
+          : null}
         <Text style={[styles.hint, { color: colors.text3 }]}>超过上限自动淘汰最旧的缓存</Text>
       </SectionShell>
+
+      <Modal visible={capacityOpen} transparent animationType="fade" onRequestClose={() => setCapacityOpen(false)}>
+        <View style={styles.modalMask}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>缓存容量上限</Text>
+            {CAPACITY_OPTIONS.map(o => (
+              <TouchableOpacity key={o.label} onPress={() => applyMax(o.mb)} style={styles.modalItem}>
+                <Text style={{ color: colors.text, fontSize: 14 }}>{o.label}（{o.mb} MB）</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => { setCustomMode(true); setCapacityOpen(false) }} style={styles.modalItem}>
+              <Text style={{ color: colors.accent, fontSize: 14 }}>其他（手填 MB）</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setCapacityOpen(false)} style={[styles.modalBtn, { alignSelf: 'flex-end' }]}>
+              <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <SectionShell colors={colors}>
         <SectionHeader
@@ -795,6 +849,8 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   songBackBtn: { minHeight: UI.buttonMinHeight, justifyContent: 'center', paddingHorizontal: UI.buttonGap },
   playAllRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.sm },
+  playAllBlock: { width: '100%' },
+  playAllSubSmall: { fontSize: 11, marginLeft: UI.iconButtonSize + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
   playAllIcon: { width: UI.iconButtonSize, height: UI.iconButtonSize, borderRadius: UI.iconButtonSize / 2, alignItems: 'center', justifyContent: 'center' },
   playAllIconText: { color: '#fff', fontSize: 16 },
   selectAllBtn: { width: UI.iconButtonSize, height: UI.iconButtonSize, alignItems: 'center', justifyContent: 'center', marginRight: UI.buttonGap },
@@ -810,6 +866,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
   modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.lg },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8 },
+  modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
   npContainer: { flex: 1, alignItems: 'center' },
   npHalf: { width: '100%', height: 190, alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden' },
   npDisc: { width: 380, height: 380, borderRadius: 190, marginTop: -190, borderWidth: 2, overflow: 'hidden' },

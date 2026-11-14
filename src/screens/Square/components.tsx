@@ -5,7 +5,7 @@ import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/
 import { LIST_IDS } from '@/config/constant'
 import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
-import { addListMusics } from '@/core/list'
+import { addListMusics, createList } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
@@ -209,6 +209,19 @@ export const useBatchSelection = () => {
 
 type BatchState = ReturnType<typeof useBatchSelection>
 
+/** 全站统一：歌曲列表总时长文案，显示在「播放全部」下方一行 */
+export const getSongsDurationText = (songs: LX.Music.MusicInfo[]) => {
+  const totalSec = songs.reduce((acc, m) => {
+    const raw = (m as unknown as { interval?: string }).interval
+    if (!raw || !raw.includes(':')) return acc
+    const [mm, ss] = raw.split(':').map(Number)
+    return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
+  }, 0)
+  return totalSec >= 3600
+    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
+    : `${Math.floor(totalSec / 60)} 分钟`
+}
+
 /** 全站统一的「进入批量编辑」图标按钮（搜索结果为基线样式） */
 export const BatchEditButton = memo(({ colors, onPress }: {
   colors: SquareColors
@@ -234,15 +247,7 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
   onDelete?: () => void
 }) => {
   const count = batch.selected.length
-  const totalSec = songs.reduce((acc, m) => {
-    const raw = (m as unknown as { interval?: string }).interval
-    if (!raw || !raw.includes(':')) return acc
-    const [mm, ss] = raw.split(':').map(Number)
-    return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
-  }, 0)
-  const durationText = totalSec >= 3600
-    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
-    : `${Math.floor(totalSec / 60)} 分钟`
+  const durationText = getSongsDurationText(songs)
   const btn = (label: string, onPress: () => void, accent = false, grid = false) => (
     <TouchableOpacity key={label} onPress={onPress} style={[styles.actionBtn, grid ? styles.actionBtnGrid : null, { backgroundColor: accent ? colors.accent : colors.surface2, borderColor: colors.line }]}>
       <Text numberOfLines={1} style={[styles.actionBtnText, { color: accent ? '#fff' : colors.text }]}>{label}</Text>
@@ -276,9 +281,6 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
                 <Text style={[styles.playAllTitle, { color: colors.text }]}>播放全部</Text>
               </TouchableOpacity>
             <View style={styles.actionRight}>
-              <TouchableOpacity onPress={onCacheAll} style={styles.iconBtn} accessibilityLabel="缓存全部">
-                <Icon name="download-2" color={colors.text2} size={20} />
-              </TouchableOpacity>
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
             </View>
@@ -295,30 +297,66 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
   musics: LX.Music.MusicInfo[]
   onClose: () => void
 }) => {
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
   const lists = (listState.allList as unknown as Array<{ id: string, name?: string }>).filter(l => l.id != 'temp')
+  const close = () => { setCreating(false); setNewName(''); onClose() }
+  const createAndAdd = () => {
+    const name = newName.trim()
+    if (!name) { toast('请输入歌单名称'); return }
+    // createList 支持直接带 list，一步完成「新建 + 加入」，无需二次查找 id
+    void createList({ id: `userlist_${Date.now()}`, name, list: musics }).then(() => {
+      toast(`已新建「${name}」并加入 ${musics.length} 首`)
+      close()
+    })
+  }
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View style={styles.modalMask}>
         <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.modalTitle, { color: colors.text }]}>加入到歌单</Text>
-          <ScrollView style={{ maxHeight: 320 }}>
-            {lists.map(l => {
-              const label = l.id == 'default' ? '未播放历史' : (l.name ?? l.id)
-              return (
-                <TouchableOpacity key={l.id} onPress={() => {
-                  void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
-                    toast(`已加入「${label}」`)
-                    onClose()
-                  })
-                }} style={styles.modalItem}>
-                  <Text style={{ color: colors.text, fontSize: 14 }}>{label}</Text>
+          {creating
+            ? <View>
+                <TextInput
+                  style={[styles.modalInput, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="新歌单名称"
+                  placeholderTextColor={colors.text3}
+                  autoFocus
+                />
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                  <TouchableOpacity onPress={() => { setCreating(false); setNewName('') }} style={styles.modalBtn}>
+                    <Text style={{ color: colors.text2, fontSize: 14 }}>返回</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={createAndAdd} style={[styles.modalBtn, { backgroundColor: colors.accent, borderRadius: RADIUS.sm }]}>
+                    <Text style={{ color: '#fff', fontSize: 14 }}>创建并加入</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            : <>
+                <ScrollView style={{ maxHeight: 320 }}>
+                  <TouchableOpacity onPress={() => setCreating(true)} style={styles.modalItem}>
+                    <Text style={{ color: colors.accent, fontSize: 14 }}>＋ 新建歌单并加入</Text>
+                  </TouchableOpacity>
+                  {lists.map(l => {
+                    const label = l.id == 'default' ? '未播放历史' : (l.name ?? l.id)
+                    return (
+                      <TouchableOpacity key={l.id} onPress={() => {
+                        void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
+                          toast(`已加入「${label}」`)
+                          close()
+                        })
+                      }} style={styles.modalItem}>
+                        <Text style={{ color: colors.text, fontSize: 14 }}>{label}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </ScrollView>
+                <TouchableOpacity onPress={close} style={styles.modalBtn}>
+                  <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
                 </TouchableOpacity>
-              )
-            })}
-          </ScrollView>
-          <TouchableOpacity onPress={onClose} style={styles.modalBtn}>
-            <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
-          </TouchableOpacity>
+              </>}
         </View>
       </View>
     </Modal>
@@ -611,6 +649,7 @@ const styles = StyleSheet.create({
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: '82%', borderRadius: RADIUS.lg, padding: SPACE.xl },
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
+  modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.md },
   modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8, alignSelf: 'flex-end' },
   sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },

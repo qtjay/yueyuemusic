@@ -32,7 +32,12 @@ export default ({ componentId }: { componentId: string }) => {
   const [browseDetail, setBrowseDetail] = useState<SquareDetailPayload | null>(null)
   const [filterText, setFilterText] = useState('')
   const [prevView, setPrevView] = useState('discover')
+  const [myListLevel, setMyListLevel] = useState<'lists' | 'songs'>('lists')
+  const myListBackRef = useRef<(() => void) | null>(null)
+  const registerMyListBack = useCallback((fn: (() => void) | null) => { myListBackRef.current = fn }, [])
   const currentPageRef = useRef(activeView)
+  // 进入具体歌单时顶栏左上角显示 ‹（与内嵌详情共用位置）
+  const showHeaderBack = !!browseDetail || (activeView == 'mylist' && myListLevel == 'songs')
 
   // 友盟页面统计：RN 单 Activity，按 Square 视图手动埋点
   useEffect(() => {
@@ -89,6 +94,7 @@ export default ({ componentId }: { componentId: string }) => {
     setDrawerOpen(false)
     setBrowseDetail(null)
     setFilterText('')
+    setMyListLevel('lists')
   }, [activeView])
 
   const scoped = !!browseDetail
@@ -112,6 +118,8 @@ export default ({ componentId }: { componentId: string }) => {
           isCompact={isCompact}
           onPlaySong={handlePlaySong}
           onGoDiscover={() => { setActiveView('discover'); setNowPlaying(false) }}
+          onLevelChange={setMyListLevel}
+          registerBack={registerMyListBack}
         />
       )
       case 'cache': return <CacheView colors={colors} />
@@ -155,14 +163,17 @@ export default ({ componentId }: { componentId: string }) => {
         {activeView != 'setting' && activeView != 'advanced' && !nowPlaying
           ? (
               <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
-                {(!isTablet || browseDetail)
+                {(!isTablet || showHeaderBack)
                   ? <TouchableOpacity onPress={() => {
                       if (browseDetail) {
                         setBrowseDetail(null)
                         setFilterText('')
+                      } else if (activeView == 'mylist' && myListLevel == 'songs') {
+                        myListBackRef.current?.()
+                        setMyListLevel('lists')
                       } else setDrawerOpen(true)
                     }} style={styles.headerMenu}>
-                      <Text style={[styles.headerMenuText, { color: colors.text }]}>{browseDetail ? '‹' : '☰'}</Text>
+                      <Text style={[styles.headerMenuText, { color: colors.text }]}>{showHeaderBack ? '‹' : '☰'}</Text>
                     </TouchableOpacity>
                   : null}
                 <SearchBox
@@ -184,7 +195,7 @@ export default ({ componentId }: { componentId: string }) => {
             : renderView()}
         </View>
 
-        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(true)} />
+        <MiniPlayer colors={colors} isTablet={isTablet} onOpen={() => setNowPlaying(v => !v)} />
       </View>
 
       {!isTablet && drawerOpen

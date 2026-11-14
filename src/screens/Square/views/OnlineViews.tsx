@@ -1,6 +1,5 @@
 import { memo, useEffect, useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
-import { Icon } from '@/components/common/Icon'
 import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardVertical from '@/screens/Home/Views/Leaderboard/Vertical'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
@@ -15,6 +14,7 @@ import boardState from '@/store/leaderboard/state'
 import {
   AddToListModal,
   BatchEditButton,
+  getSongsDurationText,
   ListActionBar,
   PagedSongList,
   SectionHeader,
@@ -56,15 +56,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
     const n = enqueueCacheMusic(songs)
     toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
   }
-  const totalSec = songs.reduce((acc, m) => {
-    const raw = (m as unknown as { interval?: string }).interval
-    if (!raw || !raw.includes(':')) return acc
-    const [mm, ss] = raw.split(':').map(Number)
-    return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
-  }, 0)
-  const durationText = totalSec >= 3600
-    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
-    : `${Math.floor(totalSec / 60)} 分钟`
+  const durationText = getSongsDurationText(songs)
   const ids = songs.map(rowKey)
   const getSelected = () => songs.filter((m, i) => batch.selected.includes(rowKey(m, i)))
 
@@ -130,9 +122,6 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>播放全部</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={cacheAll} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="缓存全部">
-                <Icon name="download-2" color={colors.text2} size={20} />
-              </TouchableOpacity>
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
           </View>
