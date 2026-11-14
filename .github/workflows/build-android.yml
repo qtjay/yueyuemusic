@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -82,6 +86,18 @@ jobs:
             android/app/build/outputs/apk/**/*arm64-v8a.apk
           if-no-files-found: error
           retention-days: 30
+
+      # artifact 的 Azure CDN 在部分网络下不可达，同步发布到 Release 作为可直连下载通道
+      - name: 发布 APK 到 latest Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: qtjay/yueyuemusic
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          mapfile -t files < <(find android/app/build/outputs/apk -type f -name '*.apk')
+          gh release create latest "${files[@]}" \
+            --title "APK 构建 #${GITHUB_RUN_NUMBER}" \
+            --notes "commit ${GITHUB_SHA}"
 
       - name: 上传构建日志（失败时便于排查）
         if: failure()
