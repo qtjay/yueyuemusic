@@ -382,12 +382,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 <SectionHeader
                   colors={colors}
                   title={activeName}
-                  hint={`${songs.length} 首`}
                   right={batchMode
                     ? <TouchableOpacity onPress={batch.exit} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
                         <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
                       </TouchableOpacity>
-                    : <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />}
+                    : undefined}
                 />
                 {batchMode
                   ? <View style={styles.editActionRow}>
@@ -405,10 +404,13 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                       ))}
                     </View>
                   : <View style={styles.playAllBlock}>
-                      <TouchableOpacity onPress={playAll} style={styles.playAllRow}>
-                        <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}><Text style={styles.playAllIconText}>▶</Text></View>
-                        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>播放全部</Text>
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+                        <TouchableOpacity onPress={playAll} style={styles.playAllRow}>
+                          <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}><Text style={styles.playAllIconText}>▶</Text></View>
+                          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>播放全部</Text>
+                        </TouchableOpacity>
+                        <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
+                      </View>
                       <Text style={[styles.playAllSubSmall, { color: colors.text3 }]}>
                         {songs.length} 首 · {getSongsDurationText(songs)}
                       </Text>
@@ -848,9 +850,9 @@ const styles = StyleSheet.create({
   headerBtn: { minHeight: UI.buttonMinHeight, justifyContent: 'center', paddingHorizontal: SPACE.sm },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   songBackBtn: { minHeight: UI.buttonMinHeight, justifyContent: 'center', paddingHorizontal: UI.buttonGap },
-  playAllRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.sm },
+  playAllRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.sm },
   playAllBlock: { width: '100%' },
-  playAllSubSmall: { fontSize: 11, marginLeft: UI.iconButtonSize + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
+  playAllSubSmall: { fontSize: 11, marginBottom: SPACE.xs },
   playAllIcon: { width: UI.iconButtonSize, height: UI.iconButtonSize, borderRadius: UI.iconButtonSize / 2, alignItems: 'center', justifyContent: 'center' },
   playAllIconText: { color: '#fff', fontSize: 16 },
   selectAllBtn: { width: UI.iconButtonSize, height: UI.iconButtonSize, alignItems: 'center', justifyContent: 'center', marginRight: UI.buttonGap },

@@ -90,7 +90,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
             </SectionShell>
             {searched
               ? <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-                  <SectionHeader colors={colors} title="搜索结果" hint={`${query.text} · ${results.length} 首`} />
+                  <SectionHeader colors={colors} title="搜索结果" hint={query.text} />
                   <ListActionBar
                     colors={colors}
                     batch={batch}

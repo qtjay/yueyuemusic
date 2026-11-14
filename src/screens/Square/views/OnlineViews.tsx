@@ -71,7 +71,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
           expanded
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-              <SectionHeader colors={colors} title="排行榜" hint={`${songs.length} 首`} />
+              <SectionHeader colors={colors} title="排行榜" />
               <ListActionBar
                 colors={colors}
                 batch={batch}
@@ -125,7 +125,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
           </View>
-          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2 }}>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginBottom: SPACE.xs }}>
             {songs.length} 首 · {durationText}
           </Text>
         </View>
@@ -205,7 +205,6 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
             <SectionHeader
               colors={colors}
               title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
-              hint={`${visibleSongs.length} 首`}
             />
             <ListActionBar
               colors={colors}

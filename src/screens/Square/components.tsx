@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   playAllIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
   playAllIconText: { color: '#fff', fontSize: 15 },
   playAllTitle: { fontSize: 16, fontWeight: '600' },
-  playAllSub: { fontSize: 11, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.sm },
+  playAllSub: { fontSize: 11, marginBottom: SPACE.xs },
   actionRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.sm },
   actionBtnGrid: { width: '31%', marginRight: '2%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
