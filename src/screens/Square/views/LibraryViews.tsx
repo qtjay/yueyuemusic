@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   songBackBtn: { minHeight: UI.buttonMinHeight, justifyContent: 'center', paddingHorizontal: UI.buttonGap },
   playAllRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.sm },
   playAllBlock: { width: '100%' },
-  playAllSubSmall: { fontSize: 11, marginBottom: SPACE.xs },
+  playAllSubSmall: { fontSize: 11, marginLeft: UI.iconButtonSize + SPACE.md, marginTop: 2, marginBottom: SPACE.xs },
   playAllIcon: { width: UI.iconButtonSize, height: UI.iconButtonSize, borderRadius: UI.iconButtonSize / 2, alignItems: 'center', justifyContent: 'center' },
   playAllIconText: { color: '#fff', fontSize: 16 },
   selectAllBtn: { width: UI.iconButtonSize, height: UI.iconButtonSize, alignItems: 'center', justifyContent: 'center', marginRight: UI.buttonGap },

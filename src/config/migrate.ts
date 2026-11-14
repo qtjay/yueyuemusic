@@ -84,9 +84,12 @@ export const getAllListData = async(): Promise<{
       case loveListKey:
         loveList = value
         break
-      default:
-        userList.push(value)
-        break
+        default:
+          // 新版 '@list__<id>' 存的是歌曲数组，不是旧格式歌单元数据，必须排除
+          if (value && !Array.isArray(value) && typeof value.id == 'string' && Array.isArray(value.list)) {
+            userList.push(value)
+          }
+          break
     }
   }
 
@@ -115,6 +118,11 @@ export const getAllListData = async(): Promise<{
  * @returns
  */
 export const migrateListData = async() => {
+  // 新旧版本共用 '@list__' 前缀：新版歌单元数据已存在时禁止迁移，
+  // 否则会把新格式的歌曲数组当作旧格式歌单元数据重建，覆盖并损坏 @user_list（升级后歌单丢失）
+  const existing = await getData<LX.List.UserListInfo[]>(storageDataPrefix.userList)
+  if (existing != null) return
+
   const playList = await getAllListData()
   let listDataAll: LX.List.ListDataFull = {
     defaultList: [],

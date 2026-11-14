@@ -125,7 +125,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
           </View>
-          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginBottom: SPACE.xs }}>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.xs }}>
             {songs.length} 首 · {durationText}
           </Text>
         </View>

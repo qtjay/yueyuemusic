@@ -1,6 +1,5 @@
 import { memo } from 'react'
 
-import Theme from '../Theme'
 import Section from '../../components/Section'
 import Source from './Source'
 import SourceName from './SourceName'
@@ -34,7 +33,6 @@ export default memo(() => {
       <IsAllowProgressBarSeek />
       <IsUseSystemFileSelector />
       <IsAlwaysKeepStatusbarHeight />
-      <Theme />
       <DrawerLayoutPosition />
       <Language />
       <FontSize />

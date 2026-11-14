@@ -78,6 +78,7 @@ export const updateSetting = (setting?: Partial<LX.AppSetting> | null, isInit: b
 
 export const initSetting = async() => {
   let setting: Partial<LX.AppSetting> | null = await getData(storageDataPrefix.setting)
+  let needRemoveOldSetting = false
 
 
   // try migrate setting before v1
@@ -99,13 +100,16 @@ export const initSetting = async() => {
         })
         throw err
       }
-      await removeData(storageDataPrefixOld.setting)
+      needRemoveOldSetting = true
     }
   }
 
-  // console.log(setting)
   const updatedSetting = updateSetting(setting, true)
-  void saveData(storageDataPrefix.setting, updatedSetting.setting)
+  // 必须等到新设置落盘：否则进程被杀后下次启动会误判为首次启动，
+  // 重复执行迁移并可能覆盖歌单数据（升级后歌单丢失的诱因之一）
+  await saveData(storageDataPrefix.setting, updatedSetting.setting)
+  // 新设置写成功后再删旧配置，避免中途失败导致重复迁移
+  if (needRemoveOldSetting) await removeData(storageDataPrefixOld.setting)
 
   return updatedSetting
 }
