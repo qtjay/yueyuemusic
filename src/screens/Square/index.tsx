@@ -2,9 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
-import themeState from '@/store/theme/state'
 import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
-import { SIDEBAR_W, SPACE, useLayoutMode, useSquareColors } from './tokens'
+import { SIDEBAR_W, SPACE, useColorMode, useLayoutMode, useSquareColors } from './tokens'
 import { trackPageEnd, trackPageStart } from '@/utils/umeng'
 import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
 import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
@@ -23,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
 /** musicsquare 风格主界面：平板常驻侧栏 / 手机抽屉，600dp 实时响应 */
 export default ({ componentId }: { componentId: string }) => {
   const colors = useSquareColors()
+  const isDarkMode = useColorMode()
   const { isTablet, isCompact } = useLayoutMode()
   const [activeView, setActiveView] = useState('discover')
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -156,7 +156,7 @@ export default ({ componentId }: { componentId: string }) => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={themeState.theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.header} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.header} />
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
       <View style={styles.main}>

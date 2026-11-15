@@ -11,10 +11,8 @@ import {
   updateListMusics,
   updateListMusicPosition,
 } from '@/core/list'
-import { setTheme } from '@/core/theme'
 import { updateSetting } from '@/core/common'
 import { useSettingValue } from '@/store/setting/hook'
-import themeState from '@/store/theme/state'
 import listState from '@/store/list/state'
 import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
@@ -43,7 +41,7 @@ import {
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
 import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
-import { RADIUS, SPACE, UI, type SquareColors } from '../tokens'
+import { RADIUS, SPACE, UI, setColorMode, useColorMode, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
   if (bytes <= 0) return '0 B'
@@ -679,7 +677,7 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
   const quality = useSettingValue('player.playQuality')
   const apiModalRef = useRef<UserApiEditModalType>(null)
 
-  const isDark = themeState.theme.isDark
+  const isDark = useColorMode()
   const qualities: LX.Quality[] = ['128k', '320k', 'flac']
 
   return (
@@ -715,8 +713,8 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
       <SectionShell colors={colors}>
         <SectionHeader colors={colors} title="外观" />
         <View style={{ flexDirection: 'row' }}>
-          <Chip colors={colors} label="浅色" active={!isDark} onPress={() => setTheme('yueyue')} />
-          <Chip colors={colors} label="深色" active={isDark} onPress={() => setTheme('yueyue_dark')} />
+          <Chip colors={colors} label="浅色" active={!isDark} onPress={() => setColorMode(false)} />
+          <Chip colors={colors} label="深色" active={isDark} onPress={() => setColorMode(true)} />
         </View>
       </SectionShell>
 

@@ -1,6 +1,6 @@
+import { useEffect, useState } from 'react'
 import { useWindowDimensions } from 'react-native'
-import { useTheme } from '@/store/theme/hook'
-import themeState from '@/store/theme/state'
+import { getData, saveData } from '@/plugins/storage'
 
 /** musicsquare 设计令牌（oklch 近似为 hex） */
 export const COLOR = {
@@ -20,9 +20,9 @@ export const COLOR = {
     danger: '#e05252',
   },
   dark: {
-    accent: '#4ed89a',
-    accentStrong: '#7ae8b4',
-    accentSoft: 'rgba(78, 216, 154, 0.14)',
+    accent: '#2fb37c',
+    accentStrong: '#4ed89a',
+    accentSoft: 'rgba(47, 179, 124, 0.16)',
     bg: '#232624',
     header: '#2b2f2c',
     surface: '#2f3330',
@@ -64,11 +64,48 @@ export const PLAYER_H = 84
 export const TABLET_BREAKPOINT = 600
 export const TRACK_ROW_H = 60
 
-/** 主题切换时 useTheme() 会触发重渲染，据此读取当前明暗 */
-export const useSquareColors = (): SquareColors => {
-  useTheme()
-  return themeState.theme.isDark ? COLOR.dark : COLOR.light
+/**
+ * Square 独立深色模式：单一状态源 + 持久化 + 订阅。
+ * 不复用旧主题系统（设置页原来传的 yueyue/yueyue_dark 主题 id 并不存在）。
+ */
+const COLOR_MODE_KEY = '@square_color_mode'
+let darkMode = false
+let loaded = false
+let loading: Promise<void> | null = null
+const listeners = new Set<() => void>()
+const notify = () => { for (const fn of listeners) fn() }
+
+/** 恢复上次的明暗选择，只执行一次 */
+export const initColorMode = () => {
+  if (loading) return loading
+  loading = getData<boolean>(COLOR_MODE_KEY)
+    .then(v => {
+      darkMode = v === true
+      loaded = true
+      notify()
+    })
+    .catch(() => { loaded = true })
+  return loading
 }
+
+export const setColorMode = (isDark: boolean) => {
+  darkMode = isDark
+  void saveData(COLOR_MODE_KEY, isDark)
+  notify()
+}
+
+export const useColorMode = (): boolean => {
+  const [dark, setDark] = useState(darkMode)
+  useEffect(() => {
+    const fn = () => setDark(darkMode)
+    listeners.add(fn)
+    if (!loaded) void initColorMode()
+    return () => { listeners.delete(fn) }
+  }, [])
+  return dark
+}
+
+export const useSquareColors = (): SquareColors => useColorMode() ? COLOR.dark : COLOR.light
 
 /**
  * 600dp 分界：平板（含折叠展开）常驻侧栏，手机用抽屉。
