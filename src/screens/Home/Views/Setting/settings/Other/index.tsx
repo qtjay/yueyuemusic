@@ -5,8 +5,6 @@ import ResourceCache from './ResourceCache'
 import MetaCache from './MetaCache'
 import DislikeList from './DislikeList'
 import Log from './Log'
-import CacheManage from './CacheManage'
-// import MaxCache from './MaxCache'
 import { useI18n } from '@/lang'
 
 export default memo(() => {
@@ -18,8 +16,6 @@ export default memo(() => {
       <MetaCache />
       <DislikeList />
       <Log />
-      <CacheManage />
-      {/* <MaxCache /> */}
     </Section>
   )
 })

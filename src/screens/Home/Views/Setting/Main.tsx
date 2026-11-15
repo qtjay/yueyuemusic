@@ -3,24 +3,21 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import Basic from './settings/Basic'
 import Player from './settings/Player'
 import LyricDesktop from './settings/LyricDesktop'
-import Search from './settings/Search'
 import List from './settings/List'
 import Sync from './settings/Sync'
 import Backup from './settings/Backup'
 import Other from './settings/Other'
-import Version from './settings/Version'
 import About from './settings/About'
 
+/** 只保留对当前 Square 界面/播放器/数据层确实生效的分组 */
 export const SETTING_SCREENS = [
   'basic',
   'player',
   'lyric_desktop',
-  'search',
   'list',
   'sync',
   'backup',
   'other',
-  'version',
   'about',
 ] as const
 
@@ -34,7 +31,11 @@ export interface MainType {
 }
 
 const Main = forwardRef<MainType, {}>((props, ref) => {
-  const [id, setId] = useState(global.lx.settingActiveId)
+  // 旧版本可能把已移除的分组（search/version）存进 settingActiveId，回退到 basic 避免空白页
+  const [id, setId] = useState<SettingScreenIds>(() =>
+    SETTING_SCREENS.includes(global.lx.settingActiveId as SettingScreenIds)
+      ? global.lx.settingActiveId as SettingScreenIds
+      : 'basic')
 
   useImperativeHandle(ref, () => ({
     setActiveId(id) {
@@ -50,12 +51,10 @@ const Main = forwardRef<MainType, {}>((props, ref) => {
     switch (id) {
       case 'player': return <Player />
       case 'lyric_desktop': return <LyricDesktop />
-      case 'search': return <Search />
       case 'list': return <List />
       case 'sync': return <Sync />
       case 'backup': return <Backup />
       case 'other': return <Other />
-      case 'version': return <Version />
       case 'about': return <About />
       case 'basic':
       default: return <Basic />
