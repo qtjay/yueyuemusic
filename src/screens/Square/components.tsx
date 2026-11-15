@@ -445,7 +445,6 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
         <Image source={require('./logo.png')} style={styles.brandMark} resizeMode="cover" />
         <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>悦悦哄睡</Text>
       </View>
-      <Text style={[styles.brandSub, { color: colors.text3 }]}>Music Square</Text>
     </View>
     <View style={styles.navItems}>
       <Text style={[styles.navGroupTitle, { color: colors.text3 }]}>音乐</Text>
@@ -465,7 +464,6 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
         )
       })}
     </View>
-    <Text style={[styles.sideFooter, { color: colors.text3 }]}>基于 LX Music · 简洁版</Text>
   </View>
 ))
 SideNav.displayName = 'SideNav'
@@ -657,11 +655,9 @@ const styles = StyleSheet.create({
   brandMark: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   brandMarkText: { color: '#fff', fontSize: 20 },
   brandName: { fontSize: 17, fontWeight: '700' },
-  brandSub: { fontSize: 11, marginTop: 4 },
   navGroupTitle: { fontSize: 11, paddingHorizontal: SPACE.sm, marginBottom: SPACE.sm },
   navItem: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: 11, marginBottom: 2 },
   navLabel: { fontSize: 14, marginLeft: SPACE.md },
-  sideFooter: { fontSize: 10, padding: SPACE.md },
   miniPlayer: { borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACE.lg, position: 'relative', flexShrink: 0 },
   miniSeekRow: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: SPACE.lg },
   miniSeekTrack: { flex: 1, height: 18, justifyContent: 'center', marginHorizontal: SPACE.sm },
