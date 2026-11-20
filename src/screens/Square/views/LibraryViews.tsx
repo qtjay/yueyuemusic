@@ -752,12 +752,12 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
   const rotate = useRef(new Animated.Value(0)).current
 
+  // 专辑封面保持匀速旋转，暂停/缓冲也不停；只在页面卸载时停止
   useEffect(() => {
     const anim = Animated.loop(Animated.timing(rotate, { toValue: 1, duration: 16000, useNativeDriver: true }))
-    if (playerState.isPlay) anim.start()
-    else anim.stop()
+    anim.start()
     return () => anim.stop()
-  }, [playerState.isPlay, rotate])
+  }, [rotate])
 
   const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
   // 歌词取自播放器已加载的 LRC（lastLyric 只是桌面歌词单句，通常为空）

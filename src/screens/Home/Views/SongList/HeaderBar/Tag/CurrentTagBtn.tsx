@@ -3,6 +3,7 @@ import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
 import { forwardRef, useImperativeHandle, useState } from 'react'
+import { View } from 'react-native'
 
 
 export interface CurrentTagBtnProps {
@@ -26,13 +27,24 @@ export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }
 
   return (
     <Button style={styles.btn} onPress={onShowList}>
-      <Text style={styles.sourceMenu}>{name}</Text>
+      <View style={styles.inner}>
+        <Text style={styles.sourceMenu}>{name}</Text>
+        <Text style={styles.arrow}>▾</Text>
+      </View>
     </Button>
   )
 })
 
 
 const styles = createStyle({
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrow: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
   btn: {
     minHeight: 40,
     paddingLeft: 16,
