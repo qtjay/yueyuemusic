@@ -1,6 +1,6 @@
 import { init as initLyricPlayer, toggleTranslation, toggleRoma, play, pause, stop, setLyric, setPlaybackRate } from '@/core/lyric'
 import { updateSetting } from '@/core/common'
-import { onDesktopLyricPositionChange, showDesktopLyric, onLyricLinePlay, showRemoteLyric } from '@/core/desktopLyric'
+import { onLyricLinePlay, showRemoteLyric } from '@/core/desktopLyric'
 import playerState from '@/store/player/state'
 import { updateNowPlayingTitles } from '@/plugins/player/utils'
 import { setLastLyric } from '@/core/player/playInfo'
@@ -30,22 +30,11 @@ export default async(setting: LX.AppSetting) => {
     toggleRoma(setting['player.isShowLyricRoma']),
   ])
 
-  if (setting['desktopLyric.enable']) {
-    showDesktopLyric().catch(() => {
-      updateSetting({ 'desktopLyric.enable': false })
-    })
-  }
   if (setting['player.isShowBluetoothLyric']) {
     showRemoteLyric(true).catch(() => {
       updateSetting({ 'player.isShowBluetoothLyric': false })
     })
   }
-  onDesktopLyricPositionChange(position => {
-    updateSetting({
-      'desktopLyric.position.x': position.x,
-      'desktopLyric.position.y': position.y,
-    })
-  })
   onLyricLinePlay(({ text, extendedLyrics }) => {
     if (!text && !playerState.isPlay) {
       void updateRemoteLyric()

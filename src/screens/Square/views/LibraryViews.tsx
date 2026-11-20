@@ -667,13 +667,12 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
 })
 CacheView.displayName = 'CacheView'
 
-/** 精简设置：音源 / 桌面歌词 / 主题 / 音质 / 高级设置入口 */
+/** 精简设置：音源 / 音质 / 深浅色 / 高级设置入口 */
 export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
   colors: SquareColors
   onOpenAdvanced: () => void
   onBack: () => void
 }) => {
-  const desktopLyric = useSettingValue('desktopLyric.enable')
   const quality = useSettingValue('player.playQuality')
   const apiModalRef = useRef<UserApiEditModalType>(null)
 
@@ -698,10 +697,6 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
 
       <SectionShell colors={colors}>
         <SectionHeader colors={colors} title="播放" />
-        <View style={styles.settingRow}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>桌面歌词</Text>
-          <Switch value={desktopLyric} onValueChange={v => updateSetting({ 'desktopLyric.enable': v })} />
-        </View>
         <Text style={[styles.hint, { color: colors.text3, marginBottom: SPACE.sm }]}>播放音质</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {qualities.map(q => (

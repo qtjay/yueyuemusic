@@ -2,14 +2,12 @@ import { createStyle } from '@/utils/tools'
 import { View } from 'react-native'
 import PlayModeBtn from './PlayModeBtn'
 import MusicAddBtn from './MusicAddBtn'
-import DesktopLyricBtn from './DesktopLyricBtn'
 import CommentBtn from './CommentBtn'
 import BatchCacheBtn from './BatchCacheBtn'
 
 export default () => {
   return (
     <View style={styles.container}>
-      <DesktopLyricBtn />
       <MusicAddBtn />
       <PlayModeBtn />
       <BatchCacheBtn />

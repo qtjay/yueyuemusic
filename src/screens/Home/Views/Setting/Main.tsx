@@ -2,23 +2,19 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 
 import Basic from './settings/Basic'
 import Player from './settings/Player'
-import LyricDesktop from './settings/LyricDesktop'
 import List from './settings/List'
 import Sync from './settings/Sync'
 import Backup from './settings/Backup'
 import Other from './settings/Other'
-import About from './settings/About'
 
-/** 只保留对当前 Square 界面/播放器/数据层确实生效的分组 */
+/** 只保留对当前 Square 界面/播放器/数据层确实生效的分组；桌面歌词与 LX Music 关于页已移除 */
 export const SETTING_SCREENS = [
   'basic',
   'player',
-  'lyric_desktop',
   'list',
   'sync',
   'backup',
   'other',
-  'about',
 ] as const
 
 export type SettingScreenIds = typeof SETTING_SCREENS[number]
@@ -50,12 +46,10 @@ const Main = forwardRef<MainType, {}>((props, ref) => {
   const component = useMemo(() => {
     switch (id) {
       case 'player': return <Player />
-      case 'lyric_desktop': return <LyricDesktop />
       case 'list': return <List />
       case 'sync': return <Sync />
       case 'backup': return <Backup />
       case 'other': return <Other />
-      case 'about': return <About />
       case 'basic':
       default: return <Basic />
     }
