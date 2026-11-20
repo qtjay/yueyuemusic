@@ -101,6 +101,8 @@ def npmPackageJson = getNpmPackageJson()
 def verCode = npmPackageJson["versionCode"]
 def verName = npmPackageJson["version"]
 def applicationName = npmPackageJson["name"]
+// 每次 CI 构建把 run number 打进 APK 文件名，便于区分不同构建；本地构建用 local
+def buildNum = System.getenv("GITHUB_RUN_NUMBER") ?: "local"
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -186,14 +188,14 @@ android {
             def abi = output.getFilter(OutputFile.ABI)
             if (abi == null) {  // null for the universal-debug, universal-release variants
                 output.outputFileName =
-                        "${applicationName}-v${defaultConfig.versionName}-universal.apk"
+                        "${applicationName}-v${defaultConfig.versionName}-b${buildNum}-universal.apk"
             } else {
                 // 本地分发不需要按 ABI 区分版本号；统一使用 package.json 的 versionCode，
                 // 否则 universal(1) 与 arm64(1003) 互装会被判降级，无法覆盖安装
                 // output.versionCodeOverride =
                 //         defaultConfig.versionCode * 1000 + versionCodes.get(abi)
                 output.outputFileName =
-                        "${applicationName}-v${defaultConfig.versionName}-${abi}.apk"
+                        "${applicationName}-v${defaultConfig.versionName}-b${buildNum}-${abi}.apk"
             }
 
         }

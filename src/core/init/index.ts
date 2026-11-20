@@ -11,8 +11,7 @@ import { initDeeplink } from './deeplink'
 import { setApiSource } from '@/core/apiSource'
 import commonActions from '@/store/common/action'
 import settingState from '@/store/setting/state'
-// 本项目为 fork，不检查上游 LX Music 的版本更新弹窗
-// import { checkUpdate } from '@/core/version'
+// 本项目为 fork，更新检查功能已移除：不检查上游版本、不弹更新弹窗、不下载 APK
 import { bootLog } from '@/utils/bootLog'
 import { cheatTip } from '@/utils/tools'
 import { autoSelectAvailableSource } from '@/core/musicSource/autoSelect'
@@ -26,7 +25,6 @@ const handlePushedHomeScreen = async() => {
     void grantUmengPrivacy()
     if (isFirstPush) {
       isFirstPush = false
-      // void checkUpdate()
       void initDeeplink()
     }
   } else {

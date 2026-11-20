@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { setComponentId } from '@/core/common'
 import { COMPONENT_IDS } from '@/config/constant'
 import { MiniPlayer, SearchBox, SideNav, type NavItem } from './components'
@@ -9,6 +9,12 @@ import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
 import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
 import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
+
+// Square 全站是固定 dp 布局；系统「字体大小/显示大小」放大（部分设备 font_scale=1.5）
+// 会把固定高度的搜索框、按钮文字撑到变形，这里统一关闭 RN 文本的系统字体缩放
+for (const comp of [Text, TextInput] as any[]) {
+  comp.defaultProps = { ...(comp.defaultProps ?? {}), allowFontScaling: false }
+}
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'discover', label: '发现音乐', icon: 'search-2' },
