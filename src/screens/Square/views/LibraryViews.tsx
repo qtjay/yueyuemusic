@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Animated, Easing, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playList } from '@/core/player/player'
 import {
@@ -752,9 +752,14 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
   const rotate = useRef(new Animated.Value(0)).current
 
-  // 专辑封面保持匀速旋转，暂停/缓冲也不停；只在页面卸载时停止
+  // 专辑封面一直匀速旋转：timing 默认缓入缓出，每圈末尾减速会看起来像停顿，必须用 linear
   useEffect(() => {
-    const anim = Animated.loop(Animated.timing(rotate, { toValue: 1, duration: 16000, useNativeDriver: true }))
+    const anim = Animated.loop(Animated.timing(rotate, {
+      toValue: 1,
+      duration: 16000,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }))
     anim.start()
     return () => anim.stop()
   }, [rotate])

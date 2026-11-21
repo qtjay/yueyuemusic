@@ -42,7 +42,7 @@ const styles = createStyle({
     alignItems: 'center',
   },
   arrow: {
-    fontSize: 12,
+    fontSize: 24,
     marginLeft: 4,
   },
   btn: {

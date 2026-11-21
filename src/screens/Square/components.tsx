@@ -2,7 +2,9 @@ import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
 import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type GestureResponderEvent } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
-import { LIST_IDS } from '@/config/constant'
+import { LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
+import { useSettingValue } from '@/store/setting/hook'
+import { updateSetting } from '@/core/common'
 import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import { addListMusics, createList } from '@/core/list'
@@ -468,6 +470,13 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
 ))
 SideNav.displayName = 'SideNav'
 
+/** 迷你条播放模式：顺序循环 → 随机循环 → 单曲循环，点击依次切换 */
+const PLAY_MODES = [
+  { id: MUSIC_TOGGLE_MODE.listLoop, icon: 'list-loop', label: '顺序循环' },
+  { id: MUSIC_TOGGLE_MODE.random, icon: 'list-random', label: '随机循环' },
+  { id: MUSIC_TOGGLE_MODE.singleLoop, icon: 'single-loop', label: '单曲循环' },
+] as const
+
 export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   colors: SquareColors
   isTablet: boolean
@@ -495,6 +504,18 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   }, [musicKey, playerState.musicInfo.pic])
   const displayProgress = seeking ?? progress
   const collected = !!music && getListMusicSync(LIST_IDS.LOVE).some(m => m.id == music.id)
+  // 已加入任一歌单（不含未播放历史/临时列表）时，「添加到歌单」按钮显示为绿色
+  const inUserList = !!music && (listState.allList as Array<{ id: string }>).some(l =>
+    l.id != LIST_IDS.DEFAULT && l.id != LIST_IDS.TEMP &&
+    (getListMusicSync(l.id) ?? []).some(m => m.id == music.id))
+  const playMethod = useSettingValue('player.togglePlayMethod')
+  const currentMode = PLAY_MODES.find(m => m.id == playMethod) ?? PLAY_MODES[0]
+  const togglePlayMode = () => {
+    const index = PLAY_MODES.findIndex(m => m.id == currentMode.id)
+    const next = PLAY_MODES[(index + 1) % PLAY_MODES.length]
+    updateSetting({ 'player.togglePlayMethod': next.id })
+    toast(next.label)
+  }
 
   const ratioOf = (evt: GestureResponderEvent) => {
     const x = evt.nativeEvent.locationX
@@ -559,15 +580,18 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
           </View>
         </TouchableOpacity>
         <View style={styles.miniControls}>
+          <TouchableOpacity onPress={togglePlayMode} style={styles.miniBtn} accessibilityLabel={`播放模式：${currentMode.label}`}>
+            <Icon name={currentMode.icon} color={colors.text2} size={19} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { if (!music) return; collected ? uncollectMusic() : collectMusic() }}
             style={styles.miniBtn}
             accessibilityLabel={collected ? '取消收藏' : '收藏到我的收藏'}
           >
-            <Icon name="love" color={collected ? colors.accent : colors.text3} size={19} />
+            <Text style={{ color: collected ? colors.accent : colors.text3, fontSize: 22 }}>{collected ? '♥' : '♡'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
-            <Icon name="add-music" color={colors.text2} size={19} />
+            <Icon name="add-music" color={inUserList ? colors.accent : colors.text2} size={19} />
           </TouchableOpacity>
           {isTablet
             ? <TouchableOpacity onPress={() => { void playPrev() }} style={styles.miniBtn}>

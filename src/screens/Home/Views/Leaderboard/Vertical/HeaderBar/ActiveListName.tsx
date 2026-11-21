@@ -73,7 +73,7 @@ const styles = createStyle({
     paddingRight: 6,
   },
   arrow: {
-    fontSize: 14,
+    fontSize: 28,
     marginLeft: 4,
   },
 })
