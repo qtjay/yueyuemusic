@@ -752,7 +752,7 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
   const rotate = useRef(new Animated.Value(0)).current
 
-  // 专辑封面一直匀速旋转：timing 默认缓入缓出，每圈末尾减速会看起来像停顿，必须用 linear
+  // 专辑封面播放时匀速旋转、暂停时停下；easing 必须 linear，否则每圈末尾减速像卡顿
   useEffect(() => {
     const anim = Animated.loop(Animated.timing(rotate, {
       toValue: 1,
@@ -760,9 +760,9 @@ export const NowPlayingView = memo(({ colors, onBack }: {
       easing: Easing.linear,
       useNativeDriver: true,
     }))
-    anim.start()
+    if (playerState.isPlay) anim.start()
     return () => anim.stop()
-  }, [rotate])
+  }, [playerState.isPlay, rotate])
 
   const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
   // 歌词取自播放器已加载的 LRC（lastLyric 只是桌面歌词单句，通常为空）
