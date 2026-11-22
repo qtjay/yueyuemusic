@@ -10,7 +10,6 @@ import {
   removeListMusics,
   updateListMusics,
   updateListMusicPosition,
-  overwriteListMusics,
 } from '@/core/list'
 import { updateSetting } from '@/core/common'
 import { LIST_IDS } from '@/config/constant'
@@ -43,6 +42,7 @@ import {
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
 import { handlePlay } from '@/components/OnlineList/listAction'
+import { getQueueIndex, insertBatchAndPlay } from '@/core/player/playQueue'
 import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, setColorMode, useColorMode, useLayoutMode, type SquareColors } from '../tokens'
 
@@ -270,10 +270,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const getSelected = () => songs.filter(m => selected.includes(m.id))
   const playAll = () => {
     if (!songs.length) return
-    // 与其它列表一致：播放队列统一用 temp，避免 playerListId 指向用户歌单
-    void overwriteListMusics(LIST_IDS.TEMP, songs).then(() => {
-      void playList(LIST_IDS.TEMP, 0)
-    })
+    insertBatchAndPlay(songs)
     onPlaySong()
   }
   const deleteSelected = () => {
@@ -749,10 +746,13 @@ const parseLrc = (lrc?: string | null): Array<{ time: number, text: string }> =>
   return lines.sort((a, b) => a.time - b.time)
 }
 
-/** 稍后播放菜单：当前播放队列（temp 列表），存放即要播放的歌曲 */
+/** 正在播放菜单：当前播放队列（temp 列表），按播放顺序展示当前歌与待播歌曲 */
 export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
   usePlayerTick()
-  const songs = (getListMusicSync(LIST_IDS.TEMP) ?? []) as LX.Music.MusicInfoOnline[]
+  const raw = (getListMusicSync(LIST_IDS.TEMP) ?? []) as LX.Music.MusicInfoOnline[]
+  const queueIndex = getQueueIndex()
+  // 仅调整显示顺序：正在播放的歌始终在队首，播放过的沉到队尾；内部数组与播放器切歌逻辑不变
+  const songs = raw.length ? [...raw.slice(queueIndex), ...raw.slice(0, queueIndex)] : []
   const cachedIds = useCachedIds()
   const batch = useBatchSelection()
   const { isTablet, isCompact } = useLayoutMode()
@@ -760,8 +760,11 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
   const ids = songs.map((m, i) => `${m.source}_${m.id}_${i}`)
   const getSelected = () => songs.filter((_m, i) => batch.selected.includes(ids[i]))
 
-  const playAll = () => { if (songs.length) void playList(LIST_IDS.TEMP, 0) }
-  const playAt = (index: number) => { void playList(LIST_IDS.TEMP, index) }
+  const playAll = () => { if (raw.length) void playList(LIST_IDS.TEMP, queueIndex) }
+  const playAt = (index: number) => {
+    if (!raw.length) return
+    void playList(LIST_IDS.TEMP, (queueIndex + index) % raw.length)
+  }
   const cacheAll = () => {
     const n = enqueueCacheMusic(songs)
     toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
@@ -783,10 +786,10 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
           songs={songs}
           resetKey="playing_queue"
           expanded
-          empty={<Empty colors={colors} text="稍后播放列表是空的，去点一首歌吧" />}
+          empty={<Empty colors={colors} text="正在播放列表是空的，去点一首歌吧" />}
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-              <SectionHeader colors={colors} title="稍后播放" hint={`${songs.length} 首`} />
+              <SectionHeader colors={colors} title="正在播放" hint={`${songs.length} 首`} />
               <ListActionBar
                 colors={colors}
                 batch={batch}

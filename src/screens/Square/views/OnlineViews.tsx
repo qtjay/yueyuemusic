@@ -4,8 +4,7 @@ import SongListPage from '@/screens/Home/Views/SongList'
 import LeaderboardVertical from '@/screens/Home/Views/Leaderboard/Vertical'
 import { getListDetailAll as getSongListDetailAll } from '@/core/songlist'
 import { getListDetailAll as getBoardDetailAll } from '@/core/leaderboard'
-import { overwriteListMusics } from '@/core/list'
-import { playList } from '@/core/player/player'
+import { insertBatchAndPlay } from '@/core/player/playQueue'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
@@ -50,7 +49,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
 
   const playAll = () => {
     if (!songs.length) return
-    void overwriteListMusics('temp', songs).then(() => { void playList('temp', 0) })
+    insertBatchAndPlay(songs)
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(songs)
@@ -182,10 +181,8 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
 
   const playAll = () => {
     if (!visibleSongs.length) return
-    void overwriteListMusics('temp', visibleSongs).then(() => {
-      void playList('temp', 0)
-      onPlaySong()
-    })
+    insertBatchAndPlay(visibleSongs)
+    onPlaySong()
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(visibleSongs)

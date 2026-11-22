@@ -1,9 +1,9 @@
 import { LIST_IDS } from '@/config/constant'
-import { addListMusics, overwriteListMusics } from '@/core/list'
-import { playList, playNext } from '@/core/player/player'
+import { addListMusics } from '@/core/list'
+import { playNext } from '@/core/player/player'
+import { insertSingleAndPlay } from '@/core/player/playQueue'
 import { addTempPlayList } from '@/core/player/tempPlayList'
 import settingState from '@/store/setting/state'
-import { getListMusicSync } from '@/utils/listManage'
 import { confirmDialog, openUrl, shareMusic, toast } from '@/utils/tools'
 import { addDislikeInfo, hasDislike } from '@/core/dislikeList'
 import playerState from '@/store/player/state'
@@ -14,18 +14,8 @@ import { clearMusicUrlByMusic } from '@/utils/data'
 export const handlePlay = (musicInfo: LX.Music.MusicInfoOnline) => {
   // 播放历史只做记录，不再当播放队列
   void addListMusics(LIST_IDS.DEFAULT, [musicInfo], settingState.setting['list.addMusicLocationType'])
-
-  // 单曲插播：放到当前播放队列「正在放的歌」之后并立即播放，播完自然继续原队列
-  const current = [...getListMusicSync(LIST_IDS.TEMP)]
-  const playing = playerState.playMusicInfo.musicInfo
-  const found = playing ? current.findIndex(m => m.id == playing.id) : -1
-  const at = found >= 0
-    ? found + 1
-    : Math.min(Math.max(playerState.playInfo.playerPlayIndex + 1, 0), current.length)
-  const next = [...current.slice(0, at), musicInfo, ...current.slice(at)]
-  void overwriteListMusics(LIST_IDS.TEMP, next).then(() => {
-    void playList(LIST_IDS.TEMP, at)
-  })
+  // 单点逻辑照旧：插到当前歌之后并立即播，播完自然继续原队列
+  insertSingleAndPlay(musicInfo)
 }
 export const handlePlayLater = (musicInfo: LX.Music.MusicInfoOnline, selectedList: LX.Music.MusicInfoOnline[], onCancelSelect: () => void) => {
   if (selectedList.length) {

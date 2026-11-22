@@ -1,13 +1,14 @@
 import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
 import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type GestureResponderEvent } from 'react-native'
 import { Icon } from '@/components/common/Icon'
-import { playNext, playPrev, playList, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
+import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
+import { insertBatchLater } from '@/core/player/playQueue'
 import { LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
-import { addListMusics, createList, overwriteListMusics } from '@/core/list'
+import { addListMusics, createList } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
@@ -283,17 +284,8 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
             {btn(`稍后播放 (${count})`, () => {
               if (!count) return toast('请先选择歌曲')
               const picked = getSelected()
-              const current = [...getListMusicSync(LIST_IDS.TEMP)]
-              const idx = playerState.playInfo.playerPlayIndex
-              const at = idx >= 0 && idx < current.length ? idx + 1 : 0
-              void overwriteListMusics(LIST_IDS.TEMP, [
-                ...current.slice(0, at),
-                ...picked,
-                ...current.slice(at),
-              ]).then(() => {
-                if (!playerState.playMusicInfo.musicInfo) void playList(LIST_IDS.TEMP, 0)
-                toast(`已添加 ${picked.length} 首到稍后播放`)
-              })
+              insertBatchLater(picked)
+              toast(`已添加 ${picked.length} 首到稍后播放`)
               batch.exit()
             }, false, true)}
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}

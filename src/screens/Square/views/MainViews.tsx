@@ -5,8 +5,7 @@ import hotSearchActions from '@/store/hotSearch/action'
 import hotSearchState from '@/store/hotSearch/state'
 import { search } from '@/core/search/music'
 import { handlePlay } from '@/components/OnlineList/listAction'
-import { playList } from '@/core/player/player'
-import { overwriteListMusics } from '@/core/list'
+import { insertBatchAndPlay } from '@/core/player/playQueue'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
 import {
@@ -94,10 +93,8 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
 
   const playAll = () => {
     if (!results.length) return
-    void overwriteListMusics('temp', results).then(() => {
-      void playList('temp', 0)
-      onPlaySong()
-    })
+    insertBatchAndPlay(results)
+    onPlaySong()
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(results)
