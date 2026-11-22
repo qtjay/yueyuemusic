@@ -14,6 +14,7 @@ import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
+import { scaleSizeW } from '@/utils/pixelRatio'
 import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, UI, type SquareColors } from './tokens'
 
 /** 已缓存歌曲 id 集合：缓存写入/删除后自动刷新，供列表蓝色勾使用 */
@@ -508,6 +509,8 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   const inUserList = !!music && (listState.allList as Array<{ id: string }>).some(l =>
     l.id != LIST_IDS.DEFAULT && l.id != LIST_IDS.TEMP &&
     (getListMusicSync(l.id) ?? []).some(m => m.id == music.id))
+  // 与 Icon(name="love", size=19) 用同一字号函数；glyph width 1165 / emSize 1024，宽度按字形比例补偿
+  const heartFontSize = scaleSizeW(19)
   const playMethod = useSettingValue('player.togglePlayMethod')
   const currentMode = PLAY_MODES.find(m => m.id == playMethod) ?? PLAY_MODES[0]
   const togglePlayMode = () => {
@@ -589,7 +592,11 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
             accessibilityLabel={collected ? '取消收藏' : '收藏到我的收藏'}
           >
             {collected
-              ? <Image source={require('./heart_filled.png')} style={[styles.heartFilled, { tintColor: colors.accent }]} />
+              ? <Image
+                  source={require('./heart_filled.png')}
+                  resizeMode="contain"
+                  style={{ width: heartFontSize * 1165 / 1024, height: heartFontSize, tintColor: colors.accent }}
+                />
               : <Icon name="love" color={colors.text3} size={19} />}
           </TouchableOpacity>
           <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
@@ -698,8 +705,6 @@ const styles = StyleSheet.create({
   miniSub: { fontSize: 11, marginTop: 3 },
   miniControls: { flexDirection: 'row', alignItems: 'center' },
   miniBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACE.sm },
-  // 由原 love 图标外轮廓填充的实心心形，tintColor 染成主题绿，尺寸与两侧 Icon(19) 一致
-  heartFilled: { width: 19, height: 19 },
   miniPlayBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   miniTime: { fontSize: 11 },
 })
