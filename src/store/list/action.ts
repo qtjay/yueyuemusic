@@ -1,4 +1,4 @@
-import state, { type InitState } from './state'
+import state from './state'
 
 
 export default {
@@ -13,9 +13,6 @@ export default {
     state.activeListId = activeListId
 
     global.state_event.mylistToggled(activeListId)
-  },
-  setTempListMeta(meta: InitState['tempListMeta']) {
-    state.tempListMeta = meta
   },
   setFetchingListStatus(id: string, status: boolean) {
     state.fetchingListStatus[id] = status

@@ -1,7 +1,6 @@
-import { createList, setTempList } from '@/core/list'
-import { playList } from '@/core/player/player'
+import { createList } from '@/core/list'
+import { insertBatchAndPlay } from '@/core/player/playQueue'
 import { getListDetail, getListDetailAll } from '@/core/leaderboard'
-import { LIST_IDS } from '@/config/constant'
 import listState from '@/store/list/state'
 import syncSourceList from '@/core/syncSourceList'
 import { confirmDialog, toMD5, toast } from '@/utils/tools'
@@ -10,25 +9,12 @@ import { confirmDialog, toMD5, toast } from '@/utils/tools'
 const getListId = (id: string) => `board__${id}`
 
 export const handlePlay = async(id: string, list?: LX.Music.MusicInfoOnline[], index = 0) => {
-  let isPlayingList = false
-  // console.log(list)
-  const listId = getListId(id)
-  if (!list?.length) list = (await getListDetail(id, 1)).list
-  if (list?.length) {
-    await setTempList(listId, [...list])
-    void playList(LIST_IDS.TEMP, index)
-    isPlayingList = true
-  }
+  let songs = list?.length ? list : (await getListDetail(id, 1)).list
   const fullList = await getListDetailAll(id)
-  if (!fullList.length) return
-  if (isPlayingList) {
-    if (listState.tempListMeta.id == listId) {
-      await setTempList(listId, [...fullList])
-    }
-  } else {
-    await setTempList(listId, [...fullList])
-    void playList(LIST_IDS.TEMP, index)
-  }
+  if (fullList.length) songs = fullList
+  if (!songs.length) return
+  // 统一模型：整批插入当前播放队列并立即播指定曲目，不再覆盖队列
+  insertBatchAndPlay(songs, index)
 }
 
 export const handleCollect = async(id: string, name: string, source: LX.OnlineSource) => {

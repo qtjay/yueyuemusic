@@ -180,19 +180,6 @@ export const setUserList = (lists: LX.List.UserListInfo[]) => {
   listAction.setUserLists(lists)
 }
 
-/**
- * 设置临时列表内歌曲
- * @param id
- * @param list
- */
-export const setTempList = async(id: string, list: LX.Music.MusicInfoOnline[]) => {
-  // 旧内嵌页面（歌单/榜单详情、deeplink）分页加载时会整批替换队列；
-  // 仍走统一写入入口，保证 300 上限与当前歌保护生效
-  await writePlayQueue(list)
-  listAction.setTempListMeta({ id })
-}
-
-
 export const setFetchingListStatus = (id: string, status: boolean) => {
   listAction.setFetchingListStatus(id, status)
 }

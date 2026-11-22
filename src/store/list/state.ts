@@ -11,10 +11,6 @@ export interface InitState {
 
   allList: Array<LX.List.MyDefaultListInfo | LX.List.MyLoveListInfo | LX.List.UserListInfo>
 
-  tempListMeta: {
-    id: string
-  }
-
   fetchingListStatus: Record<string, boolean>
 }
 
@@ -36,9 +32,6 @@ const state: InitState = {
   userList: [],
   activeListId: '',
   allList: [],
-  tempListMeta: {
-    id: '',
-  },
   fetchingListStatus: {},
 }
 

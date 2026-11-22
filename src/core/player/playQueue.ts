@@ -21,13 +21,14 @@ const writeQueue = (list: LX.Music.MusicInfo[], onDone?: () => void) => {
   void writePlayQueue(list).then(() => { onDone?.() })
 }
 
-/** 其它列表点「播放全部」：整批插到当前歌之前，并立即播这一批的第一首 */
-export const insertBatchAndPlay = (songs: LX.Music.MusicInfo[]) => {
+/** 其它列表点「播放全部」：整批插到当前歌之前，立即播这一批的 startIndex 首（默认第一首） */
+export const insertBatchAndPlay = (songs: LX.Music.MusicInfo[], startIndex = 0) => {
   if (!songs.length) return
   const current = getQueue()
   const at = Math.min(getQueueIndex(), current.length)
+  const offset = Math.min(Math.max(startIndex, 0), songs.length - 1)
   writeQueue([...current.slice(0, at), ...songs, ...current.slice(at)], () => {
-    void playList(LIST_IDS.TEMP, at)
+    void playList(LIST_IDS.TEMP, at + offset)
   })
 }
 
