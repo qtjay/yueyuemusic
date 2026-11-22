@@ -343,7 +343,7 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
                     <Text style={{ color: colors.accent, fontSize: 14 }}>＋ 新建歌单并加入</Text>
                   </TouchableOpacity>
                   {lists.map(l => {
-                    const label = l.id == 'default' ? '未播放历史' : (l.name ?? l.id)
+                    const label = l.id == 'default' ? '播放历史' : (l.name ?? l.id)
                     return (
                       <TouchableOpacity key={l.id} onPress={() => {
                         void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
@@ -505,7 +505,7 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
   }, [musicKey, playerState.musicInfo.pic])
   const displayProgress = seeking ?? progress
   const collected = !!music && getListMusicSync(LIST_IDS.LOVE).some(m => m.id == music.id)
-  // 已加入任一歌单（不含未播放历史/临时列表）时，「添加到歌单」按钮显示为绿色
+  // 已加入任一歌单（不含播放历史/临时列表）时，「添加到歌单」按钮显示为绿色
   const inUserList = !!music && (listState.allList as Array<{ id: string }>).some(l =>
     l.id != LIST_IDS.DEFAULT && l.id != LIST_IDS.TEMP &&
     (getListMusicSync(l.id) ?? []).some(m => m.id == music.id))

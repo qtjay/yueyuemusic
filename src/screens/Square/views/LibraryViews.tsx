@@ -12,6 +12,7 @@ import {
   updateListMusicPosition,
 } from '@/core/list'
 import { updateSetting } from '@/core/common'
+import { LIST_IDS } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import listState from '@/store/list/state'
 import playerState from '@/store/player/state'
@@ -40,8 +41,8 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
-import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, PagedSongList, SectionHeader, SectionShell, TrackRow, useCachedIds, usePlayerTick } from '../components'
-import { RADIUS, SPACE, UI, setColorMode, useColorMode, type SquareColors } from '../tokens'
+import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
+import { RADIUS, SPACE, UI, setColorMode, useColorMode, useLayoutMode, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
   if (bytes <= 0) return '0 B'
@@ -56,8 +57,8 @@ const BUILTIN_IDS = ['default', 'love', 'temp', 'download']
 const LIST_ROW_H = 52
 /** 歌曲行高（dp），用于二级拖拽排序换算 */
 const SONG_ROW_H = 64
-/** 内置 default 列表显示为「未播放历史」 */
-export const DEFAULT_LIST_NAME = '未播放历史'
+/** 内置 default 列表显示为「播放历史」 */
+export const DEFAULT_LIST_NAME = '播放历史'
 const displayListName = (id: string, name?: string) =>
   id == 'default' ? DEFAULT_LIST_NAME : (name ?? id)
 
@@ -742,6 +743,86 @@ const parseLrc = (lrc?: string | null): Array<{ time: number, text: string }> =>
   }
   return lines.sort((a, b) => a.time - b.time)
 }
+
+/** 正在播放菜单：当前播放队列（temp 列表），存放即要播放的歌曲 */
+export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
+  usePlayerTick()
+  const songs = (getListMusicSync(LIST_IDS.TEMP) ?? []) as LX.Music.MusicInfoOnline[]
+  const cachedIds = useCachedIds()
+  const batch = useBatchSelection()
+  const { isTablet, isCompact } = useLayoutMode()
+  const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
+  const ids = songs.map((m, i) => `${m.source}_${m.id}_${i}`)
+  const getSelected = () => songs.filter((_m, i) => batch.selected.includes(ids[i]))
+
+  const playAll = () => { if (songs.length) void playList(LIST_IDS.TEMP, 0) }
+  const playAt = (index: number) => { void playList(LIST_IDS.TEMP, index) }
+  const cacheAll = () => {
+    const n = enqueueCacheMusic(songs)
+    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+  }
+  const deleteSelected = () => {
+    const picked = getSelected()
+    if (!picked.length) { toast('请先选中歌曲'); return }
+    void confirmDialog({ message: `从播放队列移除选中的 ${picked.length} 首？` }).then(ok => {
+      if (ok) void removeListMusics(LIST_IDS.TEMP, picked.map(m => m.id))
+      batch.exit()
+    })
+  }
+
+  return (
+    <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
+      <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg, marginBottom: 0 }}>
+        <PagedSongList
+          colors={colors}
+          songs={songs}
+          resetKey="playing_queue"
+          expanded
+          empty={<Empty colors={colors} text="播放队列是空的，去点一首歌吧" />}
+          header={
+            <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
+              <SectionHeader colors={colors} title="正在播放" hint={`${songs.length} 首`} />
+              <ListActionBar
+                colors={colors}
+                batch={batch}
+                ids={ids}
+                songs={songs}
+                onPlayAll={playAll}
+                onCacheAll={cacheAll}
+                getSelected={getSelected}
+                onAddToList={musics => setAddMusics(musics)}
+                showDelete
+                onDelete={deleteSelected}
+              />
+            </SectionShell>
+          }
+          renderRow={(music, index) => (
+            <TrackRow
+              colors={colors}
+              index={index}
+              musicInfo={music}
+              isTablet={isTablet}
+              isCompact={isCompact}
+              textSize="small"
+              onPress={() => playAt(index)}
+              cached={cachedIds.has(music.id)}
+              batchMode={batch.batchMode}
+              selected={batch.selected.includes(ids[index])}
+              onToggleSelect={() => batch.toggle(ids[index])}
+            />
+          )}
+        />
+        <AddToListModal
+          colors={colors}
+          visible={addMusics.length > 0}
+          musics={addMusics}
+          onClose={() => { setAddMusics([]); batch.exit() }}
+        />
+      </SectionShell>
+    </View>
+  )
+})
+PlayingQueueView.displayName = 'PlayingQueueView'
 
 /** 正在播放：下半圆旋转专辑（直边贴顶）+ 逐行歌词；顶部无工具栏、无进度/控制 */
 export const NowPlayingView = memo(({ colors, onBack }: {

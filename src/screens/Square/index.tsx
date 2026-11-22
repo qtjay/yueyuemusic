@@ -8,7 +8,7 @@ import { trackPageEnd, trackPageStart } from '@/utils/umeng'
 import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
 import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
 import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
-import { AdvancedView, CacheView, MyListView, NowPlayingView, SettingView } from './views/LibraryViews'
+import { AdvancedView, CacheView, MyListView, NowPlayingView, PlayingQueueView, SettingView } from './views/LibraryViews'
 
 // Square 全站是固定 dp 布局；系统「字体大小/显示大小」放大（部分设备 font_scale=1.5）
 // 会把固定高度的搜索框、按钮文字撑到变形，这里统一关闭 RN 文本的系统字体缩放
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'songlist', label: '热门歌单', icon: 'album' },
   { id: 'leaderboard', label: '排行榜', icon: 'leaderboard' },
   { id: 'mylist', label: '我的歌单', icon: 'love' },
+  { id: 'playing', label: '正在播放', icon: 'play' },
   { id: 'cache', label: '缓存管理', icon: 'download-2' },
   { id: 'setting', label: '设置', icon: 'setting' },
 ]
@@ -128,6 +129,7 @@ export default ({ componentId }: { componentId: string }) => {
           registerBack={registerMyListBack}
         />
       )
+      case 'playing': return <PlayingQueueView colors={colors} />
       case 'cache': return <CacheView colors={colors} />
       case 'setting': return (
         <SettingView
