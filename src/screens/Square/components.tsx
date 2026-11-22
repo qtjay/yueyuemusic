@@ -600,7 +600,13 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
               : <Icon name="love" color={colors.text3} size={19} />}
           </TouchableOpacity>
           <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
-            <Icon name="add-music" color={inUserList ? colors.accent : colors.text2} size={19} />
+            {inUserList
+              ? <Image
+                  source={require('./add_music_filled.png')}
+                  resizeMode="contain"
+                  style={{ width: heartFontSize, height: heartFontSize, tintColor: colors.accent }}
+                />
+              : <Icon name="add-music" color={colors.text2} size={19} />}
           </TouchableOpacity>
           {isTablet
             ? <TouchableOpacity onPress={() => { void playPrev() }} style={styles.miniBtn}>
