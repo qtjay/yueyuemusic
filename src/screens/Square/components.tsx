@@ -9,6 +9,7 @@ import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import { addListMusics, createList } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
+import { addTempPlayList } from '@/core/player/tempPlayList'
 import { toast } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
@@ -268,16 +269,24 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
         ? <>
             <TouchableOpacity
               onPress={toggleSelectAll}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.headerSelectAll}
               accessibilityLabel={allSelected ? '取消全选' : '全选'}
             >
-              <View style={[styles.batchCheck, { borderColor: colors.accent, backgroundColor: allSelected ? colors.accent : 'transparent' }]}>
+              <View style={[styles.batchCheck, { marginRight: 0, borderColor: colors.accent, backgroundColor: allSelected ? colors.accent : 'transparent' }]}>
                 <Text style={styles.batchCheckText}>{allSelected ? '✓' : ''}</Text>
               </View>
             </TouchableOpacity>
             {btn(`加入歌单 (${count})`, () => {
               if (!count) return toast('请先选择歌曲')
               onAddToList(getSelected())
+            }, false, true)}
+            {btn(`稍后播放 (${count})`, () => {
+              if (!count) return toast('请先选择歌曲')
+              const picked = getSelected()
+              addTempPlayList(picked.map(m => ({ listId: '', musicInfo: m as LX.Player.PlayMusic, isTop: true })))
+              toast(`已添加 ${picked.length} 首到稍后播放`)
+              batch.exit()
             }, false, true)}
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}
             {btn('完成', batch.exit, true, true)}
@@ -674,7 +683,9 @@ const styles = StyleSheet.create({
   batchCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },
   batchCheckText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingVertical: SPACE.sm },
-  headerSelectAll: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: SPACE.md, marginRight: UI.buttonGap },
+  // 歌曲行选择框左边 = FlatList 内边距 16 + pagedRow 12 + trackRow 8 = 36；
+  // 表头在 SectionShell 内（16 + card padding 16 = 32），故只需再补 4 即可对齐
+  headerSelectAll: { width: 22, height: 22, marginLeft: SPACE.xs, marginRight: SPACE.sm, marginVertical: SPACE.sm },
   actionSpacer: { flex: 1, minWidth: 8 },
   actionBlock: { width: '100%' },
   actionHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingTop: SPACE.sm },
