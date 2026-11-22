@@ -1,15 +1,14 @@
 import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
 import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type GestureResponderEvent } from 'react-native'
 import { Icon } from '@/components/common/Icon'
-import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
+import { playNext, playPrev, playList, togglePlay, collectMusic, uncollectMusic, resetRandomNextMusicInfo } from '@/core/player/player'
 import { LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
-import { addListMusics, createList } from '@/core/list'
+import { addListMusics, createList, overwriteListMusics } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
-import { addTempPlayList } from '@/core/player/tempPlayList'
 import { toast } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
@@ -284,8 +283,18 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
             {btn(`稍后播放 (${count})`, () => {
               if (!count) return toast('请先选择歌曲')
               const picked = getSelected()
-              addTempPlayList(picked.map(m => ({ listId: '', musicInfo: m as LX.Player.PlayMusic, isTop: true })))
-              toast(`已添加 ${picked.length} 首到稍后播放`)
+              const current = [...getListMusicSync(LIST_IDS.TEMP)]
+              const idx = playerState.playInfo.playerPlayIndex
+              const at = idx >= 0 && idx < current.length ? idx + 1 : 0
+              void overwriteListMusics(LIST_IDS.TEMP, [
+                ...current.slice(0, at),
+                ...picked,
+                ...current.slice(at),
+              ]).then(() => {
+                resetRandomNextMusicInfo()
+                if (!playerState.playMusicInfo.musicInfo) void playList(LIST_IDS.TEMP, 0)
+                toast(`已添加 ${picked.length} 首到稍后播放`)
+              })
               batch.exit()
             }, false, true)}
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}
