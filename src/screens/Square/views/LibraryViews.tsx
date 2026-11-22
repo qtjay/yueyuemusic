@@ -744,7 +744,7 @@ const parseLrc = (lrc?: string | null): Array<{ time: number, text: string }> =>
   return lines.sort((a, b) => a.time - b.time)
 }
 
-/** 正在播放菜单：当前播放队列（temp 列表），存放即要播放的歌曲 */
+/** 稍后播放菜单：当前播放队列（temp 列表），存放即要播放的歌曲 */
 export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
   usePlayerTick()
   const songs = (getListMusicSync(LIST_IDS.TEMP) ?? []) as LX.Music.MusicInfoOnline[]
@@ -778,10 +778,10 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
           songs={songs}
           resetKey="playing_queue"
           expanded
-          empty={<Empty colors={colors} text="播放队列是空的，去点一首歌吧" />}
+          empty={<Empty colors={colors} text="稍后播放列表是空的，去点一首歌吧" />}
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-              <SectionHeader colors={colors} title="正在播放" hint={`${songs.length} 首`} />
+              <SectionHeader colors={colors} title="稍后播放" hint={`${songs.length} 首`} />
               <ListActionBar
                 colors={colors}
                 batch={batch}

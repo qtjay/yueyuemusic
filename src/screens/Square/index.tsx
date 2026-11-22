@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'songlist', label: '热门歌单', icon: 'album' },
   { id: 'leaderboard', label: '排行榜', icon: 'leaderboard' },
   { id: 'mylist', label: '我的歌单', icon: 'love' },
-  { id: 'playing', label: '正在播放', icon: 'play' },
+  { id: 'playing', label: '稍后播放', icon: 'play' },
   { id: 'cache', label: '缓存管理', icon: 'download-2' },
   { id: 'setting', label: '设置', icon: 'setting' },
 ]
