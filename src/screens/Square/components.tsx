@@ -590,9 +590,9 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
           >
             {collected
               ? <View style={styles.heartFilled}>
-                  <View style={[styles.heartLobe, { left: 0, backgroundColor: colors.accent }]} />
+                  <View style={[styles.heartLobe, { left: 1, backgroundColor: colors.accent }]} />
                   <View style={[styles.heartLobe, { left: 8, backgroundColor: colors.accent }]} />
-                  <View style={[styles.heartTip, { backgroundColor: colors.accent }]} />
+                  <View style={[styles.heartTip, { borderTopColor: colors.accent }]} />
                 </View>
               : <Icon name="love" color={colors.text3} size={19} />}
           </TouchableOpacity>
@@ -702,10 +702,16 @@ const styles = StyleSheet.create({
   miniSub: { fontSize: 11, marginTop: 3 },
   miniControls: { flexDirection: 'row', alignItems: 'center' },
   miniBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACE.sm },
-  // 19×19 绿色实心心形：两个圆瓣 + 一个 45° 方块，尺寸与两侧 Icon(19) 一致
+  // 19×19 绿色实心心形：两个圆瓣 + 尖朝下的三角形，尺寸与两侧 Icon(19) 一致
   heartFilled: { width: 19, height: 19 },
-  heartLobe: { position: 'absolute', top: 1, width: 11, height: 11, borderRadius: 5.5 },
-  heartTip: { position: 'absolute', top: 5, left: 2, width: 15, height: 15, transform: [{ rotate: '45deg' }] },
+  heartLobe: { position: 'absolute', top: 1, width: 10, height: 10, borderRadius: 5 },
+  heartTip: {
+    position: 'absolute', top: 7, left: 0.5,
+    width: 0, height: 0,
+    borderLeftWidth: 9, borderRightWidth: 9, borderTopWidth: 11,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
   miniPlayBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   miniTime: { fontSize: 11 },
 })
