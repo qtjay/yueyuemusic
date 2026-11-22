@@ -706,9 +706,9 @@ const styles = StyleSheet.create({
   heartFilled: { width: 19, height: 19 },
   heartLobe: { position: 'absolute', top: 1, width: 10, height: 10, borderRadius: 5 },
   heartTip: {
-    position: 'absolute', top: 7, left: 0.5,
+    position: 'absolute', top: 6, left: 1,
     width: 0, height: 0,
-    borderLeftWidth: 9, borderRightWidth: 9, borderTopWidth: 11,
+    borderLeftWidth: 8.5, borderRightWidth: 8.5, borderTopWidth: 12,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     backgroundColor: 'transparent',
   },
