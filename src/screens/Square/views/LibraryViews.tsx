@@ -42,6 +42,7 @@ import {
 } from '@/core/musicCache'
 import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/Views/Setting/settings/Basic/UserApiEditModal'
 import SettingPage from '@/screens/Home/Views/Setting'
+import { handlePlay } from '@/components/OnlineList/listAction'
 import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, setColorMode, useColorMode, useLayoutMode, type SquareColors } from '../tokens'
 
@@ -449,7 +450,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                       textSize="small"
                       onPress={batchMode
                         ? () => toggleSelect(music.id)
-                        : () => { void playList(activeId, index); onPlaySong() }}
+                        : () => { handlePlay(music as LX.Music.MusicInfoOnline); onPlaySong() }}
                       onCache={undefined}
                       cached={cachedIds.has(music.id)}
                     />
