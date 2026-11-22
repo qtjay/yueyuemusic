@@ -1,4 +1,5 @@
 import { LIST_IDS } from '@/config/constant'
+import playerState from '@/store/player/state'
 import listAction from '@/store/list/action'
 import listState from '@/store/list/state'
 import settingState from '@/store/setting/state'
@@ -85,6 +86,24 @@ export const overwriteListMusics = async(listId: string, musicInfos: LX.Music.Mu
   await global.list_event.list_music_overwrite(listId, musicInfos)
 }
 
+/** 正在播放队列最多保存的歌曲数 */
+export const MAX_PLAY_QUEUE_SIZE = 300
+
+/**
+ * 正在播放队列的统一写入入口：超过上限时按加入顺序移除数组尾部（最早加入的），
+ * 并保护当前正在播放的歌不被挤掉。所有写 temp 队列的地方都必须走这里。
+ */
+export const writePlayQueue = async(list: LX.Music.MusicInfo[]) => {
+  let next = list
+  if (list.length > MAX_PLAY_QUEUE_SIZE) {
+    next = list.slice(0, MAX_PLAY_QUEUE_SIZE)
+    const currentId = playerState.playMusicInfo.musicInfo?.id
+    const droppedCurrent = list.slice(MAX_PLAY_QUEUE_SIZE).find(m => m.id == currentId)
+    if (droppedCurrent) next = [...next.slice(0, -1), droppedCurrent]
+  }
+  await overwriteListMusics(LIST_IDS.TEMP, next)
+}
+
 /**
  * 覆盖列表内的歌曲
  */
@@ -167,7 +186,9 @@ export const setUserList = (lists: LX.List.UserListInfo[]) => {
  * @param list
  */
 export const setTempList = async(id: string, list: LX.Music.MusicInfoOnline[]) => {
-  await overwriteListMusics(LIST_IDS.TEMP, list)
+  // 旧内嵌页面（歌单/榜单详情、deeplink）分页加载时会整批替换队列；
+  // 仍走统一写入入口，保证 300 上限与当前歌保护生效
+  await writePlayQueue(list)
   listAction.setTempListMeta({ id })
 }
 

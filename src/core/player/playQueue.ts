@@ -1,11 +1,8 @@
 import { LIST_IDS } from '@/config/constant'
-import { overwriteListMusics } from '@/core/list'
+import { writePlayQueue } from '@/core/list'
 import { playList } from '@/core/player/player'
 import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
-
-/** 正在播放列表最多保存的歌曲数 */
-export const MAX_QUEUE_SIZE = 300
 
 const getQueue = () => [...getListMusicSync(LIST_IDS.TEMP)]
 
@@ -19,18 +16,9 @@ export const getQueueIndex = () => {
   return found >= 0 ? found : 0
 }
 
-/** 超过上限时按加入顺序移除数组尾部（最早加入的），并保护当前正在播放的歌 */
-export const trimQueue = (list: LX.Music.MusicInfo[]) => {
-  if (list.length <= MAX_QUEUE_SIZE) return list
-  const keep = list.slice(0, MAX_QUEUE_SIZE)
-  const currentId = playerState.playMusicInfo.musicInfo?.id
-  const droppedCurrent = list.slice(MAX_QUEUE_SIZE).find(m => m.id == currentId)
-  if (!droppedCurrent) return keep
-  return [...keep.slice(0, -1), droppedCurrent]
-}
-
+// 所有写入都经过 writePlayQueue（300 上限 + 当前歌保护）
 const writeQueue = (list: LX.Music.MusicInfo[], onDone?: () => void) => {
-  void overwriteListMusics(LIST_IDS.TEMP, trimQueue(list)).then(() => { onDone?.() })
+  void writePlayQueue(list).then(() => { onDone?.() })
 }
 
 /** 其它列表点「播放全部」：整批插到当前歌之前，并立即播这一批的第一首 */

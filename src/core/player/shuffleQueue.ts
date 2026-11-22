@@ -1,5 +1,5 @@
 import { LIST_IDS } from '@/config/constant'
-import { overwriteListMusics } from '@/core/list'
+import { writePlayQueue } from '@/core/list'
 import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
 
@@ -27,5 +27,5 @@ export const shuffleCurrentQueue = () => {
     rest[j] = tmp
   }
   const next = [...rest.slice(0, idx), current[idx], ...rest.slice(idx)]
-  void overwriteListMusics(LIST_IDS.TEMP, next)
+  void writePlayQueue(next)
 }
