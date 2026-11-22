@@ -279,8 +279,28 @@ const idFixRxp = /\.0$/
 /**
  * 获取用户列表
  */
+const BUILTIN_LIST_IDS = new Set<string>([LIST_IDS.DEFAULT, LIST_IDS.LOVE, LIST_IDS.TEMP, LIST_IDS.DOWNLOAD])
+
 export const getUserLists = async(): Promise<LX.List.UserListInfo[]> => {
-  const list = await getData<LX.List.UserListInfo[]>(userListKey) ?? []
+  let list = await getData<LX.List.UserListInfo[]>(userListKey) ?? []
+  // 歌单元数据被误写成空数组或部分缺失时，从残留的歌曲数据补建，
+  // 避免重启后歌单不显示（歌曲本身一直保存在 @list__<id> 里，不会丢）
+  const orphanIds = (await getAllKeys())
+    .filter(key => key.startsWith(listPrefix) && key.length > listPrefix.length)
+    .map(key => key.slice(listPrefix.length))
+    .filter(id => !BUILTIN_LIST_IDS.has(id) && !list.some(l => l.id == id))
+  if (orphanIds.length) {
+    const restored: LX.List.UserListInfo[] = [
+      ...list,
+      ...orphanIds.map((id, index) => ({
+        id,
+        name: `恢复的歌单 ${index + 1}`,
+        locationUpdateTime: null,
+      } as LX.List.UserListInfo)),
+    ]
+    await saveUserList(restored)
+    list = restored
+  }
   for (const info of list) {
     // 兼容v2.3.0之前版本PC端插入数字类型的ID导致其意外在末尾追加 .0 的问题
     if (info.sourceListId?.endsWith?.('.0')) {

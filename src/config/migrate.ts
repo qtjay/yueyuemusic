@@ -123,6 +123,13 @@ export const migrateListData = async() => {
   const existing = await getData<LX.List.UserListInfo[]>(storageDataPrefix.userList)
   if (existing != null) return
 
+  // 新旧版本共用 '@list__' 前缀：若已存在新格式的「歌曲数组」，说明当前不是 v1 之前的旧数据。
+  // 此时继续迁移会把 userList 重建为空并写回 @user_list，导致重启后歌单不显示。
+  const allKeys = await getAllKeys()
+  const listKeys = allKeys.filter(key => key.startsWith(storageDataPrefixOld.list) && key.length > storageDataPrefixOld.list.length)
+  const listValues = await getDataMultiple(listKeys) as Array<[string, any]>
+  if (listValues.some(([, value]) => Array.isArray(value))) return
+
   const playList = await getAllListData()
   let listDataAll: LX.List.ListDataFull = {
     defaultList: [],
