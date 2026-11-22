@@ -589,11 +589,7 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
             accessibilityLabel={collected ? '取消收藏' : '收藏到我的收藏'}
           >
             {collected
-              ? <View style={styles.heartFilled}>
-                  <View style={[styles.heartLobe, { left: 1, backgroundColor: colors.accent }]} />
-                  <View style={[styles.heartLobe, { left: 8, backgroundColor: colors.accent }]} />
-                  <View style={[styles.heartTip, { borderTopColor: colors.accent }]} />
-                </View>
+              ? <Image source={require('./heart_filled.png')} style={[styles.heartFilled, { tintColor: colors.accent }]} />
               : <Icon name="love" color={colors.text3} size={19} />}
           </TouchableOpacity>
           <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
@@ -702,16 +698,8 @@ const styles = StyleSheet.create({
   miniSub: { fontSize: 11, marginTop: 3 },
   miniControls: { flexDirection: 'row', alignItems: 'center' },
   miniBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACE.sm },
-  // 19×19 绿色实心心形：两个圆瓣 + 尖朝下的三角形，尺寸与两侧 Icon(19) 一致
+  // 由原 love 图标外轮廓填充的实心心形，tintColor 染成主题绿，尺寸与两侧 Icon(19) 一致
   heartFilled: { width: 19, height: 19 },
-  heartLobe: { position: 'absolute', top: 1, width: 10, height: 10, borderRadius: 5 },
-  heartTip: {
-    position: 'absolute', top: 6, left: 1,
-    width: 0, height: 0,
-    borderLeftWidth: 8.5, borderRightWidth: 8.5, borderTopWidth: 12,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
   miniPlayBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   miniTime: { fontSize: 11 },
 })
