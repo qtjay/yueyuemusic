@@ -10,6 +10,7 @@ import {
   removeListMusics,
   updateListMusics,
   updateListMusicPosition,
+  overwriteListMusics,
 } from '@/core/list'
 import { updateSetting } from '@/core/common'
 import { LIST_IDS } from '@/config/constant'
@@ -268,7 +269,10 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const getSelected = () => songs.filter(m => selected.includes(m.id))
   const playAll = () => {
     if (!songs.length) return
-    void playList(activeId, 0)
+    // 与其它列表一致：播放队列统一用 temp，避免 playerListId 指向用户歌单
+    void overwriteListMusics(LIST_IDS.TEMP, songs).then(() => {
+      void playList(LIST_IDS.TEMP, 0)
+    })
     onPlaySong()
   }
   const deleteSelected = () => {

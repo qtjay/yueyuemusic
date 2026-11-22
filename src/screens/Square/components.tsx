@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState, type ReactElement } from 'react'
 import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, type GestureResponderEvent } from 'react-native'
 import { Icon } from '@/components/common/Icon'
-import { playNext, playPrev, playList, togglePlay, collectMusic, uncollectMusic, resetRandomNextMusicInfo } from '@/core/player/player'
+import { playNext, playPrev, playList, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
 import { LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
@@ -291,7 +291,6 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
                 ...picked,
                 ...current.slice(at),
               ]).then(() => {
-                resetRandomNextMusicInfo()
                 if (!playerState.playMusicInfo.musicInfo) void playList(LIST_IDS.TEMP, 0)
                 toast(`已添加 ${picked.length} 首到稍后播放`)
               })

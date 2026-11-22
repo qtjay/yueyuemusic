@@ -1,4 +1,5 @@
-import { addPlayedList, clearPlayedList } from '@/core/player/playedList'
+import { clearPlayedList } from '@/core/player/playedList'
+import { shuffleCurrentQueue } from '@/core/player/shuffleQueue'
 import { pause, playNext } from '@/core/player/player'
 import { setStatusText, setIsPlay } from '@/core/player/playStatus'
 // import { resetPlayerMusicInfo } from '@/core/player/playInfo'
@@ -46,10 +47,9 @@ export default async(setting: LX.AppSetting) => {
 
   const handleConfigUpdated: typeof global.state_event.configUpdated = (keys, settings) => {
     if (keys.includes('player.togglePlayMethod')) {
-      const newValue = settings['player.togglePlayMethod']
       if (playerState.playedList.length) clearPlayedList()
-      const playMusicInfo = playerState.playMusicInfo
-      if (newValue == 'random' && playMusicInfo.musicInfo && !playMusicInfo.isTempPlay) addPlayedList({ ...(playMusicInfo as LX.Player.PlayMusicInfo) })
+      // 随机播放 = 把当前播放队列打乱一次，之后按队列顺序正常切歌
+      if (settings['player.togglePlayMethod'] == 'random') shuffleCurrentQueue()
     }
   }
 

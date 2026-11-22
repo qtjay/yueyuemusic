@@ -12,7 +12,6 @@ import {
 } from '@/core/player/playInfo'
 import {
   clearPlayedList,
-  addPlayedList,
   removePlayedList,
 } from '@/core/player/playedList'
 import {
@@ -192,7 +191,6 @@ const handleRestorePlay = async(restorePlayInfo: LX.Player.SavedPlayInfo) => {
     setStatusText(global.i18n.t('lyric__load_error'))
   })
 
-  if (settingState.setting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay) addPlayedList(playMusicInfo as LX.Player.PlayMusicInfo)
 }
 
 
@@ -240,7 +238,6 @@ const handlePlay = async() => {
   }
 
   global.lx.isPlayedStop &&= false
-  resetRandomNextMusicInfo()
 
   if (global.lx.restorePlayInfo) {
     void handleRestorePlay(global.lx.restorePlayInfo)
@@ -259,8 +256,6 @@ const handlePlay = async() => {
   clearDelayNextTimeout()
   clearLoadTimeout()
 
-
-  if (settingState.setting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay) addPlayedList(playMusicInfo as LX.Player.PlayMusicInfo)
 
   debouncePlay(musicInfo)
 }
@@ -303,17 +298,6 @@ const handleToggleStop = async() => {
 }
 
 
-const randomNextMusicInfo = {
-  info: null as LX.Player.PlayMusicInfo | null,
-  // index: -1,
-}
-export const resetRandomNextMusicInfo = () => {
-  if (randomNextMusicInfo.info) {
-    randomNextMusicInfo.info = null
-    // randomNextMusicInfo.index = -1
-  }
-}
-
 export const getNextPlayMusicInfo = async(): Promise<LX.Player.PlayMusicInfo | null> => {
   if (playerState.tempPlayList.length) { // 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
     const playMusicInfo = playerState.tempPlayList[0]
@@ -321,8 +305,6 @@ export const getNextPlayMusicInfo = async(): Promise<LX.Player.PlayMusicInfo | n
   }
 
   if (playerState.playMusicInfo.musicInfo == null) return null
-
-  if (randomNextMusicInfo.info) return randomNextMusicInfo.info
 
   const playMusicInfo = playerState.playMusicInfo
   const playInfo = playerState.playInfo
@@ -371,10 +353,8 @@ export const getNextPlayMusicInfo = async(): Promise<LX.Player.PlayMusicInfo | n
   let togglePlayMethod = settingState.setting['player.togglePlayMethod']
   switch (togglePlayMethod) {
     case 'listLoop':
-      nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1
-      break
     case 'random':
-      nextIndex = getRandom(0, filteredList.length)
+      nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1
       break
     case 'list':
       nextIndex = playerIndex === filteredList.length - 1 ? -1 : playerIndex + 1
@@ -392,10 +372,6 @@ export const getNextPlayMusicInfo = async(): Promise<LX.Player.PlayMusicInfo | n
     isTempPlay: false,
   }
 
-  if (togglePlayMethod == 'random') {
-    randomNextMusicInfo.info = nextPlayMusicInfo
-    // randomNextMusicInfo.index = nextIndex
-  }
   return nextPlayMusicInfo
 }
 
@@ -452,10 +428,6 @@ export const playNext = async(isAutoToggle = false): Promise<void> => {
       return
     }
   }
-  if (randomNextMusicInfo.info) {
-    await handlePlayNext(randomNextMusicInfo.info)
-    return
-  }
   // const isCheckFile = findNum > 2 // 针对下载列表，如果超过两次都碰到无效歌曲，则过滤整个列表内的无效歌曲
   let { filteredList, playerIndex } = await filterList({ // 过滤已播放歌曲
     listId: currentListId,
@@ -481,10 +453,8 @@ export const playNext = async(isAutoToggle = false): Promise<void> => {
   }
   switch (togglePlayMethod) {
     case 'listLoop':
-      nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1
-      break
     case 'random':
-      nextIndex = getRandom(0, filteredList.length)
+      nextIndex = playerIndex === filteredList.length - 1 ? 0 : playerIndex + 1
       break
     case 'list':
       nextIndex = playerIndex === filteredList.length - 1 ? -1 : playerIndex + 1
@@ -568,8 +538,6 @@ export const playPrev = async(isAutoToggle = false): Promise<void> => {
     }
     switch (togglePlayMethod) {
       case 'random':
-        nextIndex = getRandom(0, filteredList.length)
-        break
       case 'listLoop':
       case 'list':
         nextIndex = playerIndex === 0 ? filteredList.length - 1 : playerIndex - 1

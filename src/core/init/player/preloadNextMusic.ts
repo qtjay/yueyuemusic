@@ -1,5 +1,5 @@
 import { getMusicUrl } from '@/core/music'
-import { getNextPlayMusicInfo, resetRandomNextMusicInfo } from '@/core/player/player'
+import { getNextPlayMusicInfo } from '@/core/player/player'
 import { checkUrl } from '@/utils/request'
 import playerState from '@/store/player/state'
 import { isCached } from '@/plugins/player/utils'
@@ -48,7 +48,6 @@ export default () => {
   const handleConfigUpdated: typeof global.state_event.configUpdated = (keys, settings) => {
     if (!keys.includes('player.togglePlayMethod')) return
     if (!preloadMusicInfo.info || preloadMusicInfo.info.isTempPlay) return
-    resetRandomNextMusicInfo()
     preloadMusicInfo.info = null
     preloadMusicInfo.preProgress = playerState.progress.nowPlayTime
   }
