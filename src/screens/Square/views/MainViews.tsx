@@ -178,6 +178,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
         loading={loading}
         empty={searched ? undefined : null}
         scrollSignal={searched && resultTop > 0 ? { offset: resultTop + SPACE.lg, token: query.seq } : undefined}
+        scrollBottomPadding={searched ? 1200 : 0}
         header={
           <View>
             <SectionShell colors={colors}>

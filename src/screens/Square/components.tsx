@@ -396,7 +396,7 @@ AddToListModal.displayName = 'AddToListModal'
 const PAGE_SIZE = 20
 
 /** 分页歌曲列表：首屏 20 首，触底或点「加载更多」续载；批量编辑时展开全部；顶部模块随列表整体上滑滚出 */
-export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, renderRow, loading, empty, scrollSignal }: {
+export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, renderRow, loading, empty, scrollSignal, scrollBottomPadding = 0 }: {
   colors: SquareColors
   songs: LX.Music.MusicInfoOnline[]
   resetKey: string | number
@@ -407,6 +407,8 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
   empty?: ReactElement | null
   /** 变化时滚到指定 content offset，用于搜索后把结果区置顶 */
   scrollSignal?: { offset: number, token: number }
+  /** 保证内容足够长，避免 scrollToOffset 被最大可滚动距离截断 */
+  scrollBottomPadding?: number
 }) => {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const canLoadMore = useRef(true)
@@ -437,7 +439,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
     <FlatList
       ref={listRef}
       style={{ flex: 1 }}
-      contentContainerStyle={{ paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}
+      contentContainerStyle={{ paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: scrollBottomPadding }}
       data={loading ? [] : visible}
       keyExtractor={(item, index) => `${item.source}_${item.id}_${index}`}
       ListHeaderComponent={header}
