@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 手机端强制竖屏：横屏时 Square 固定 dp 布局会显示不全 -->
+    <bool name="force_portrait">true</bool>
+</resources>
