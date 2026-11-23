@@ -98,6 +98,8 @@ jobs:
           gh release create latest "${files[@]}" \
             --title "APK 构建 #${GITHUB_RUN_NUMBER}" \
             --notes "commit ${GITHUB_SHA}"
+          # 某些仓库策略会把新建 Release 落成 draft，draft 无法直连下载，这里强制发布
+          gh release edit latest --draft=false
 
       - name: 上传构建日志（失败时便于排查）
         if: failure()

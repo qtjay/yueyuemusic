@@ -40,3 +40,4 @@ jobs:
           gh release create latest $files \
             --title "APK ${{ inputs.artifact_name }}" \
             --notes "Republished from CI run ${{ inputs.run_id }} (${{ github.sha }})"
+          gh release edit latest --draft=false
