@@ -85,7 +85,9 @@ export class ListEvent extends Event {
     const changedIds = listDataOverwrite(listData)
     await updateUserList(userLists)
     // await checkUpdateList(changedIds)
-    const removedList = oldIds.filter(id => !allMusicList.has(id))
+    // 只删「新数据里确实不存在的歌单」：歌曲按需加载，内存里没有不等于歌单被删
+    const newIds = new Set(listData.userList.map(l => l.id))
+    const removedList = oldIds.filter(id => !newIds.has(id))
     if (removedList.length) await removeListMusics(removedList)
     const allListIds = [LIST_IDS.DEFAULT, LIST_IDS.LOVE, ...userLists.map(l => l.id)]
     if (changedIds.includes(LIST_IDS.TEMP)) allListIds.push(LIST_IDS.TEMP)
