@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- 平板：SCREEN_ORIENTATION_UNSPECIFIED = -1，保持横竖自由 -->
-    <integer name="screen_orientation">-1</integer>
-</resources>

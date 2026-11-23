@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- 平板（smallestWidth ≥ 600dp）保持横竖自由 -->
-    <bool name="force_portrait">false</bool>
-</resources>
