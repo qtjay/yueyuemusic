@@ -441,7 +441,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                       textSize="small"
                       onPress={batchMode
                         ? () => toggleSelect(music.id)
-                        : () => { handlePlay(music as LX.Music.MusicInfoOnline); onPlaySong() }}
+                        : () => { handlePlay(music as LX.Music.MusicInfoOnline, songs, index); onPlaySong() }}
                       onCache={undefined}
                       cached={cachedIds.has(music.id)}
                     />

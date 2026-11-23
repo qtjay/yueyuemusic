@@ -1,7 +1,7 @@
 import { LIST_IDS } from '@/config/constant'
 import { addListMusics } from '@/core/list'
 import { playNext } from '@/core/player/player'
-import { insertSingleAndPlay } from '@/core/player/playQueue'
+import { insertBatchAndPlay, insertSingleAndPlay } from '@/core/player/playQueue'
 import { addTempPlayList } from '@/core/player/tempPlayList'
 import settingState from '@/store/setting/state'
 import { confirmDialog, openUrl, shareMusic, toast } from '@/utils/tools'
@@ -11,11 +11,17 @@ import musicSdk from '@/utils/musicSdk'
 import { toOldMusicInfo } from '@/utils'
 import { clearMusicUrlByMusic } from '@/utils/data'
 
-export const handlePlay = (musicInfo: LX.Music.MusicInfoOnline) => {
+export const handlePlay = (musicInfo: LX.Music.MusicInfoOnline, list?: LX.Music.MusicInfo[], index?: number) => {
   // 播放历史只做记录，不再当播放队列
   void addListMusics(LIST_IDS.DEFAULT, [musicInfo], settingState.setting['list.addMusicLocationType'])
-  // 单点逻辑照旧：插到当前歌之后并立即播，播完自然继续原队列
-  insertSingleAndPlay(musicInfo)
+  const tail = list?.length && typeof index == 'number' && index >= 0 ? list.slice(index) : []
+  if (tail.length) {
+    // 单点：把这首歌及它在该列表中后面的歌整体插到队列队首，并立即播这首歌
+    insertBatchAndPlay(tail)
+  } else {
+    // 旧 UI 等拿不到列表的调用保持原来的单曲插播
+    insertSingleAndPlay(musicInfo)
+  }
 }
 export const handlePlayLater = (musicInfo: LX.Music.MusicInfoOnline, selectedList: LX.Music.MusicInfoOnline[], onCancelSelect: () => void) => {
   if (selectedList.length) {

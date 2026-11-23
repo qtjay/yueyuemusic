@@ -249,7 +249,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
             isTablet={isTablet}
             isCompact={isCompact}
             textSize="small"
-            onPress={() => { handlePlay(item); onPlaySong() }}
+            onPress={() => { handlePlay(item, visibleResults, index); onPlaySong() }}
             cached={cachedIds.has(item.id)}
             batchMode={batch.batchMode}
             selected={batch.selected.includes(rowKey(item, index))}

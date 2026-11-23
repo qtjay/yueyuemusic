@@ -96,7 +96,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               isTablet={isTablet}
               isCompact={isCompact}
               textSize="small"
-              onPress={() => { handlePlay(music) }}
+              onPress={() => { handlePlay(music, songs, index) }}
               cached={cachedIds.has(music.id)}
               batchMode
               selected={batch.selected.includes(rowKey(music, index))}
@@ -230,7 +230,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
             isTablet={isTablet}
             isCompact={isCompact}
             textSize="small"
-            onPress={() => { handlePlay(music); onPlaySong() }}
+            onPress={() => { handlePlay(music, visibleSongs, index); onPlaySong() }}
             cached={cachedIds.has(music.id)}
             batchMode={batch.batchMode}
             selected={batch.selected.includes(rowKey(music, index))}
