@@ -34,7 +34,11 @@ const checkListExist = (changedIds: string[]) => {
 
 export const checkUpdateList = async(changedIds: string[]) => {
   if (!changedIds.length) return
-  await saveListMusics(changedIds.map(id => ({ id, musics: allMusicList.get(id) as LX.List.ListMusics })))
+  // 歌单歌曲是按需加载的：内存里没有的列表绝不能用 undefined 覆盖其存储，否则重启后歌曲全丢
+  const data = changedIds
+    .map(id => ({ id, musics: allMusicList.get(id) }))
+    .filter((item): item is { id: string, musics: LX.List.ListMusics } => item.musics != null)
+  if (data.length) await saveListMusics(data)
   global.app_event.myListMusicUpdate(changedIds)
 }
 
@@ -85,7 +89,10 @@ export class ListEvent extends Event {
     if (removedList.length) await removeListMusics(removedList)
     const allListIds = [LIST_IDS.DEFAULT, LIST_IDS.LOVE, ...userLists.map(l => l.id)]
     if (changedIds.includes(LIST_IDS.TEMP)) allListIds.push(LIST_IDS.TEMP)
-    await saveListMusics([...allListIds.map(id => ({ id, musics: allMusicList.get(id) as LX.List.ListMusics }))])
+    const persistList = allListIds
+      .map(id => ({ id, musics: allMusicList.get(id) }))
+      .filter((item): item is { id: string, musics: LX.List.ListMusics } => item.musics != null)
+    if (persistList.length) await saveListMusics(persistList)
 
     global.app_event.myListMusicUpdate(changedIds)
     this.emit('list_data_overwrite', listData, isRemote)

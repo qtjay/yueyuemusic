@@ -151,7 +151,10 @@ export const migrateListData = async() => {
   listDataOverwrite(listDataAll)
   await saveUserList(userLists)
   const allListIds = [LIST_IDS.DEFAULT, LIST_IDS.LOVE, ...userLists.map(l => l.id)]
-  await saveListMusics([...allListIds.map(id => ({ id, musics: allMusicList.get(id) as LX.List.ListMusics }))])
+  const persistList = allListIds
+    .map(id => ({ id, musics: allMusicList.get(id) }))
+    .filter((item): item is { id: string, musics: LX.List.ListMusics } => item.musics != null)
+  if (persistList.length) await saveListMusics(persistList)
   await removeData(storageDataPrefixOld.listSort)
 
   const listPosition = await getData(storageDataPrefixOld.listPosition)
