@@ -35,19 +35,17 @@ const FALLBACK_HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', 
 const HOT_PAGE_SIZE = 8
 const HISTORY_SIZE = 3
 const ALL = 'all'
-const QUALITY_ORDER: string[] = ['128k', '320k', 'flac', 'flac24bit', '192k', 'ape', 'wav']
-const qualityRank = (q: string) => {
-  const i = QUALITY_ORDER.indexOf(q)
-  return i < 0 ? 999 : i
+/** 按「最高音质」分组，与 TrackRow 的 24bit/SQ/HQ 标签一一对应；每首歌只归一组 */
+const TOP_QUALITY_KEYS = ['flac24bit', 'flac', '320k', '128k'] as const
+const QUALITY_LABEL: Record<string, string> = {
+  flac24bit: '24bit', flac: 'SQ', '320k': 'HQ', '128k': '标准',
 }
-/** 搜索结果的音质主要在 meta._qualitys（TrackRow 的 SQ/HQ/24bit 标签也读它），qualitys 数组常为空 */
-const getQualityKeys = (m: LX.Music.MusicInfoOnline) => {
-  const meta = m.meta as (LX.Music.MusicInfoMeta_online & { _qualitys?: Record<string, any> }) | undefined
-  const keys = new Set<string>()
-  const map = meta?._qualitys
-  if (map) for (const [k, v] of Object.entries(map)) { if (v) keys.add(k) }
-  if (Array.isArray(meta?.qualitys)) for (const q of meta.qualitys) keys.add(String(q.type))
-  return keys
+const getTopQuality = (m: LX.Music.MusicInfoOnline): string => {
+  const q = (m.meta as (LX.Music.MusicInfoMeta_online & { _qualitys?: Record<string, any> }) | undefined)?._qualitys
+  if (q?.flac24bit) return 'flac24bit'
+  if (q?.flac || q?.ape) return 'flac'
+  if (q?.['320k']) return '320k'
+  return '128k'
 }
 
 /** 发现 / 聚合搜索：首屏 20 首，上滑时顶部模块随列表滚出 */
@@ -133,13 +131,13 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   ], [results, sourceName])
   const qualityOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const m of results) for (const q of getQualityKeys(m)) set.add(q)
-    return [ALL, ...Array.from(set).sort((a, b) => qualityRank(a) - qualityRank(b))]
+    for (const m of results) set.add(getTopQuality(m))
+    return [ALL, ...TOP_QUALITY_KEYS.filter(k => set.has(k))]
   }, [results])
   const visibleResults = useMemo(() => results.filter(m => {
     if (platform != ALL && m.source != platform) return false
     if (quality == ALL) return true
-    return getQualityKeys(m).has(quality)
+    return getTopQuality(m) == quality
   }), [results, platform, quality])
 
   const getSelected = () => visibleResults.filter((m, i) => batch.selected.includes(rowKey(m, i)))
@@ -217,7 +215,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                       <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions}
                         onChange={id => { setPlatform(id); batch.selectAll([]) }} />
                       <FilterDropdown colors={colors} label="音质" value={quality}
-                        options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : q }))}
+                        options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : (QUALITY_LABEL[q] ?? q) }))}
                         onChange={id => { setQuality(id); batch.selectAll([]) }} />
                     </View>
                     <ListActionBar
