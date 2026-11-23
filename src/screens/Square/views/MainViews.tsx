@@ -13,6 +13,7 @@ import musicSdk from '@/utils/musicSdk'
 import {
   AddToListModal,
   Chip,
+  FilterDropdown,
   HeaderBackText,
   ListActionBar,
   PagedSongList,
@@ -53,7 +54,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const [hotLive, setHotLive] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [hotPage, setHotPage] = useState(0)
-  // 搜索记录（最近 3 行）、平台/音质筛选、结果区顶部位置
+  // 搜索记录（最近 3 条气泡）、平台/音质下拉筛选、结果区顶部位置
   const [history, setHistory] = useState<string[]>([])
   const [platform, setPlatform] = useState(ALL)
   const [quality, setQuality] = useState(ALL)
@@ -158,16 +159,6 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
     return () => { cancelled = true }
   }, [query.seq, query.text])
 
-  const filterRow = (label: string, options: Array<{ id: string, label: string }>, value: string, onChange: (id: string) => void) => (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
-      <Text style={{ color: colors.text3, fontSize: 12, marginRight: 4 }}>{label}</Text>
-      {options.map(o => (
-        <Chip key={o.id} colors={colors} label={o.label} active={value == o.id}
-          onPress={() => { onChange(o.id); batch.selectAll([]) }} />
-      ))}
-    </View>
-  )
-
   return (
     <View style={{ flex: 1 }}>
       <PagedSongList
@@ -197,16 +188,12 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
               </View>
             </SectionShell>
             <SectionShell colors={colors}>
-              <SectionHeader colors={colors} title="搜索记录" hint={history.length ? `最近 ${history.length} 条` : undefined} />
-              {history.length
-                ? history.map((word, i) => (
-                    <TouchableOpacity key={`${word}_${i}`} onPress={() => onHotWord(word)}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7 }}>
-                      <Text style={{ color: colors.text3, fontSize: 12, width: 20 }}>{i + 1}</Text>
-                      <Text numberOfLines={1} style={{ color: colors.text2, fontSize: 13, flex: 1 }}>{word}</Text>
-                    </TouchableOpacity>
-                  ))
-                : <Text style={{ color: colors.text3, fontSize: 13 }}>还没有搜索记录</Text>}
+              <SectionHeader colors={colors} title="搜索记录" />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {history.length
+                  ? history.map((word, i) => <Chip key={`${word}_${i}`} colors={colors} label={word} onPress={() => onHotWord(word)} />)
+                  : <Text style={{ color: colors.text3, fontSize: 13 }}>还没有搜索记录</Text>}
+              </View>
             </SectionShell>
             {searched
               ? <View onLayout={e => setResultTop(e.nativeEvent.layout.y)}>
@@ -217,9 +204,12 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                       hint={query.text}
                       right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
                     />
-                    <View style={{ marginBottom: 4 }}>
-                      {filterRow('平台', platformOptions, platform, setPlatform)}
-                      {filterRow('音质', qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : q })), quality, setQuality)}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+                      <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions}
+                        onChange={id => { setPlatform(id); batch.selectAll([]) }} />
+                      <FilterDropdown colors={colors} label="音质" value={quality}
+                        options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : q }))}
+                        onChange={id => { setQuality(id); batch.selectAll([]) }} />
                     </View>
                     <ListActionBar
                       colors={colors}
