@@ -1,7 +1,7 @@
 import { Platform } from 'react-native'
 import RNFS from 'react-native-fs'
 import { getData, saveData } from '@/plugins/storage'
-import { addUserApi, getUserApiList } from '@/utils/data'
+import { addUserApi, getUserApiList, removeUserApi as removeUserApiFromStore } from '@/utils/data'
 import { builtinMusicSources, type BuiltinMusicSource } from './builtin'
 
 /** assets 下存放内置音源脚本的目录 */
@@ -37,29 +37,48 @@ export const isBuiltinSourceImported = async(source: BuiltinMusicSource) => {
 }
 
 /**
- * 首次启动时把内置音源注入到自定义音源列表
- * 之后由用户自行管理（删除后不会被重新注入）
+ * 把内置音源补齐到自定义音源列表：
+ * 按 key 记录已注入项，后续版本新增的音源会自动补齐，用户主动删除的不会复活。
+ * 同时清掉被上游判定为恶意的「独家音源」和内置音源的同名旧版本。
  */
 export const initBuiltinMusicSources = async(): Promise<LX.UserApi.UserApiInfo[]> => {
-  if (await getData<boolean>(BUILTIN_INITED_KEY)) return []
-
   let list: LX.UserApi.UserApiInfo[] = []
   try {
     list = await getUserApiList()
   } catch { /* 首次启动可能为空 */ }
 
+  const builtinByName = new Map(builtinMusicSources.map(s => [s.name, s.version]))
+  const toRemove = [...new Set(list
+    .filter(api => api.name === '独家音源' || (builtinByName.has(api.name) && builtinByName.get(api.name) !== api.version))
+    .map(api => api.id))]
+  if (toRemove.length) {
+    try {
+      await removeUserApiFromStore(toRemove)
+      list = list.filter(api => !toRemove.includes(api.id))
+    } catch (err) {
+      console.warn('[builtin-source] cleanup failed', err)
+    }
+  }
+
+  // 兼容旧版本：曾存的是 boolean true，视为未记录任何 key
+  const raw = await getData<unknown>(BUILTIN_INITED_KEY)
+  const inited = new Set<string>(Array.isArray(raw) ? raw as string[] : [])
   const existing = new Set(list.map(api => `${api.name}__${api.version ?? ''}`))
   const imported: LX.UserApi.UserApiInfo[] = []
 
   for (const source of builtinMusicSources) {
-    if (existing.has(`${source.name}__${source.version}`)) continue
-    try {
-      imported.push(await importBuiltinSource(source))
-    } catch (err) {
-      console.warn('[builtin-source] import failed', source.key, err)
+    if (inited.has(source.key)) continue
+    if (!existing.has(`${source.name}__${source.version}`)) {
+      try {
+        imported.push(await importBuiltinSource(source))
+      } catch (err) {
+        console.warn('[builtin-source] import failed', source.key, err)
+        continue
+      }
     }
+    inited.add(source.key)
   }
 
-  await saveData(BUILTIN_INITED_KEY, true)
+  await saveData(BUILTIN_INITED_KEY, [...inited])
   return imported
 }
