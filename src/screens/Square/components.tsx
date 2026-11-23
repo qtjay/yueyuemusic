@@ -65,6 +65,17 @@ export const SectionHeader = memo(({ colors, title, hint, right }: {
 ))
 SectionHeader.displayName = 'SectionHeader'
 
+/** 标题右侧统一的「返回」文字：编辑态退出编辑，详情页/歌单二级返回上一级 */
+export const HeaderBackText = memo(({ colors, onPress }: {
+  colors: SquareColors
+  onPress: () => void
+}) => (
+  <TouchableOpacity onPress={onPress} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }} style={{ paddingHorizontal: 4, paddingVertical: 4 }}>
+    <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>返回</Text>
+  </TouchableOpacity>
+))
+HeaderBackText.displayName = 'HeaderBackText'
+
 export const Empty = memo(({ colors, icon = '🎧', text }: {
   colors: SquareColors
   icon?: string
@@ -289,7 +300,6 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
               batch.exit()
             }, false, true)}
             {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}
-            {btn('完成', batch.exit, true, true)}
           </>
         : <View style={styles.actionBlock}>
             <View style={styles.actionHeader}>

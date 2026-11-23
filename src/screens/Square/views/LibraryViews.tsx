@@ -43,7 +43,7 @@ import UserApiEditModal, { type UserApiEditModalType } from '@/screens/Home/View
 import SettingPage from '@/screens/Home/Views/Setting'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { getQueueIndex, insertBatchAndPlay } from '@/core/player/playQueue'
-import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
+import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, HeaderBackText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, setColorMode, useColorMode, useLayoutMode, type SquareColors } from '../tokens'
 
 const formatSize = (bytes: number) => {
@@ -308,9 +308,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 title="我的歌单"
                 hint={`${lists.length} 个`}
                 right={editing
-                  ? <TouchableOpacity onPress={() => { setEditing(false); clearSelection() }} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
-                      <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
-                    </TouchableOpacity>
+                  ? <HeaderBackText colors={colors} onPress={() => { setEditing(false); clearSelection() }} />
                   : <BatchEditButton colors={colors} onPress={() => setEditing(true)} />}
               />
               {editing
@@ -383,11 +381,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 <SectionHeader
                   colors={colors}
                   title={activeName}
-                  right={batchMode
-                    ? <TouchableOpacity onPress={batch.exit} style={styles.headerBtn} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}>
-                        <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>完成</Text>
-                      </TouchableOpacity>
-                    : undefined}
+                  right={<HeaderBackText colors={colors} onPress={batchMode ? batch.exit : backToLists} />}
                 />
                 {batchMode
                   ? <View style={styles.editActionRow}>
@@ -789,7 +783,12 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
           empty={<Empty colors={colors} text="正在播放列表是空的，去点一首歌吧" />}
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-              <SectionHeader colors={colors} title="正在播放" hint={`${songs.length} 首`} />
+              <SectionHeader
+                colors={colors}
+                title="正在播放"
+                hint={`${songs.length} 首`}
+                right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
+              />
               <ListActionBar
                 colors={colors}
                 batch={batch}

@@ -43,8 +43,8 @@ export default ({ componentId }: { componentId: string }) => {
   const myListBackRef = useRef<(() => void) | null>(null)
   const registerMyListBack = useCallback((fn: (() => void) | null) => { myListBackRef.current = fn }, [])
   const currentPageRef = useRef(activeView)
-  // 进入具体歌单时顶栏左上角显示 ‹（与内嵌详情共用位置）
-  const showHeaderBack = !!browseDetail || (activeView == 'mylist' && myListLevel == 'songs')
+  // 仅「具体歌单的歌曲列表」保留左上角 ‹；歌单/榜单歌曲列表改用 ☰ + 标题右侧「返回」
+  const showHeaderBack = activeView == 'mylist' && myListLevel == 'songs'
 
   // 友盟页面统计：RN 单 Activity，按 Square 视图手动埋点
   useEffect(() => {
@@ -112,6 +112,7 @@ export default ({ componentId }: { componentId: string }) => {
     payload: browseDetail!,
     filterText,
     onPlaySong: handlePlaySong,
+    onBack: () => { setBrowseDetail(null); setFilterText('') },
   }
 
   const renderView = () => {
@@ -173,10 +174,7 @@ export default ({ componentId }: { componentId: string }) => {
               <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.line }]}>
                 {(!isTablet || showHeaderBack)
                   ? <TouchableOpacity onPress={() => {
-                      if (browseDetail) {
-                        setBrowseDetail(null)
-                        setFilterText('')
-                      } else if (activeView == 'mylist' && myListLevel == 'songs') {
+                      if (activeView == 'mylist' && myListLevel == 'songs') {
                         myListBackRef.current?.()
                         setMyListLevel('lists')
                       } else setDrawerOpen(true)

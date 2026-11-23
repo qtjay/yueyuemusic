@@ -14,6 +14,7 @@ import {
   AddToListModal,
   BatchEditButton,
   getSongsDurationText,
+  HeaderBackText,
   ListActionBar,
   PagedSongList,
   SectionHeader,
@@ -70,7 +71,11 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
           expanded
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-              <SectionHeader colors={colors} title="排行榜" />
+              <SectionHeader
+                colors={colors}
+                title="排行榜"
+                right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
+              />
               <ListActionBar
                 colors={colors}
                 batch={batch}
@@ -138,13 +143,14 @@ LeaderboardView.displayName = 'LeaderboardView'
 const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`
 
 /** 二级：Square 统一风格的歌曲列表（顶栏返回/内搜索由容器控制） */
-export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, filterText, onPlaySong }: {
+export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, filterText, onPlaySong, onBack }: {
   colors: SquareColors
   isTablet: boolean
   isCompact: boolean
   payload: SquareDetailPayload
   filterText: string
   onPlaySong: () => void
+  onBack: () => void
 }) => {
   const [songs, setSongs] = useState<LX.Music.MusicInfoOnline[]>([])
   const [loading, setLoading] = useState(false)
@@ -202,6 +208,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
             <SectionHeader
               colors={colors}
               title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
+              right={<HeaderBackText colors={colors} onPress={batch.batchMode ? batch.exit : onBack} />}
             />
             <ListActionBar
               colors={colors}

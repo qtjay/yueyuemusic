@@ -11,6 +11,7 @@ import { toast } from '@/utils/tools'
 import {
   AddToListModal,
   Chip,
+  HeaderBackText,
   ListActionBar,
   PagedSongList,
   SectionHeader,
@@ -144,7 +145,12 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
             </SectionShell>
             {searched
               ? <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-                  <SectionHeader colors={colors} title="搜索结果" hint={query.text} />
+                  <SectionHeader
+                    colors={colors}
+                    title="搜索结果"
+                    hint={query.text}
+                    right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
+                  />
                   <ListActionBar
                     colors={colors}
                     batch={batch}
