@@ -28,6 +28,13 @@ export const addHistoryWord = async(word: string) => {
   if (!list) return
   void saveSearchHistory(list)
 }
+/** Square 搜索页专用：记录搜索词，不受旧设置「显示历史搜索」开关限制 */
+export const addSquareHistoryWord = async(word: string) => {
+  if (!word) return
+  if (!searchState.historyList.length) searchActions.setHistoryWord(await getSearchHistoryFromStore())
+  const list = searchActions.addHistoryWord(word)
+  if (list) void saveSearchHistory(list)
+}
 export const removeHistoryWord = (index: number) => {
   const list = searchActions.removeHistoryWord(index)
   void saveSearchHistory(list)

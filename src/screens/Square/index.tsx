@@ -8,6 +8,7 @@ import { trackPageEnd, trackPageStart } from '@/utils/umeng'
 import { DiscoverSearchView, type SearchQuery } from './views/MainViews'
 import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineViews'
 import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
+import { addSquareHistoryWord } from '@/core/search/search'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, PlayingQueueView, SettingView } from './views/LibraryViews'
 
 // Square 全站是固定 dp 布局；系统「字体大小/显示大小」放大（部分设备 font_scale=1.5）
@@ -73,15 +74,17 @@ export default ({ componentId }: { componentId: string }) => {
     return () => setSquareDetailHandler(null)
   }, [])
 
-  const doSearch = useCallback(() => {
+  const doSearch = useCallback(async() => {
     const text = searchText.trim()
     if (!text) return
+    await addSquareHistoryWord(text)
     setQuery({ text, seq: Date.now() })
     setActiveView('discover')
     setNowPlaying(false)
   }, [searchText])
 
-  const handleHotWord = useCallback((word: string) => {
+  const handleHotWord = useCallback(async(word: string) => {
+    await addSquareHistoryWord(word)
     setSearchText(word)
     setQuery({ text: word, seq: Date.now() })
     setActiveView('discover')

@@ -396,7 +396,7 @@ AddToListModal.displayName = 'AddToListModal'
 const PAGE_SIZE = 20
 
 /** 分页歌曲列表：首屏 20 首，触底或点「加载更多」续载；批量编辑时展开全部；顶部模块随列表整体上滑滚出 */
-export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, renderRow, loading, empty }: {
+export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, renderRow, loading, empty, scrollSignal }: {
   colors: SquareColors
   songs: LX.Music.MusicInfoOnline[]
   resetKey: string | number
@@ -405,10 +405,20 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
   renderRow: (music: LX.Music.MusicInfoOnline, index: number) => ReactElement
   loading?: boolean
   empty?: ReactElement | null
+  /** 变化时滚到指定 content offset，用于搜索后把结果区置顶 */
+  scrollSignal?: { offset: number, token: number }
 }) => {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const canLoadMore = useRef(true)
+  const listRef = useRef<FlatList>(null)
   useEffect(() => { setLimit(PAGE_SIZE); canLoadMore.current = true }, [resetKey])
+  useEffect(() => {
+    if (!scrollSignal || scrollSignal.offset <= 0) return
+    const t = setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: scrollSignal.offset, animated: true })
+    }, 80)
+    return () => clearTimeout(t)
+  }, [scrollSignal?.token, scrollSignal?.offset])
   const visible = expanded ? songs : songs.slice(0, limit)
   const hasMore = !expanded && limit < songs.length
   // 每次续载后需一次真实滚动手势，避免首屏不满一屏时自动把全部加载完
@@ -425,6 +435,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
     : (empty ?? <Empty colors={colors} text="没有找到歌曲" />)
   return (
     <FlatList
+      ref={listRef}
       style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}
       data={loading ? [] : visible}

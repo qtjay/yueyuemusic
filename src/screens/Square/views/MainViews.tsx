@@ -4,10 +4,12 @@ import { getList } from '@/core/hotSearch'
 import hotSearchActions from '@/store/hotSearch/action'
 import hotSearchState from '@/store/hotSearch/state'
 import { search } from '@/core/search/music'
+import { getSearchHistory } from '@/core/search/search'
 import { handlePlay } from '@/components/OnlineList/listAction'
 import { insertBatchAndPlay } from '@/core/player/playQueue'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
 import { toast } from '@/utils/tools'
+import musicSdk from '@/utils/musicSdk'
 import {
   AddToListModal,
   Chip,
@@ -20,7 +22,7 @@ import {
   useBatchSelection,
   useCachedIds,
 } from '../components'
-import { type SquareColors } from '../tokens'
+import { SPACE, type SquareColors } from '../tokens'
 
 export interface SearchQuery {
   text: string
@@ -30,6 +32,9 @@ export interface SearchQuery {
 /** 网络不可用时的兜底词（保留哄睡场景常用词） */
 const FALLBACK_HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', '毛不易', '轻音乐', '摇篮曲', '白噪音']
 const HOT_PAGE_SIZE = 8
+const HISTORY_SIZE = 3
+const ALL = 'all'
+const QUALITY_ORDER: string[] = ['128k', '320k', 'flac', 'flac24bit', '192k', 'ape', 'wav']
 
 /** 发现 / 聚合搜索：首屏 20 首，上滑时顶部模块随列表滚出 */
 export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong }: {
@@ -48,6 +53,17 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const [hotLive, setHotLive] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [hotPage, setHotPage] = useState(0)
+  // 搜索记录（最近 3 行）、平台/音质筛选、结果区顶部位置
+  const [history, setHistory] = useState<string[]>([])
+  const [platform, setPlatform] = useState(ALL)
+  const [quality, setQuality] = useState(ALL)
+  const [resultTop, setResultTop] = useState(0)
+
+  useEffect(() => {
+    void getSearchHistory().then(list => setHistory(list.slice(0, HISTORY_SIZE)))
+  }, [query.seq])
+  // 每次新搜索回到「全部」，避免上一次的筛选条件把结果挡空
+  useEffect(() => { setPlatform(ALL); setQuality(ALL) }, [query.seq])
 
   const loadHotWords = useCallback(async(refresh: boolean) => {
     setHotLoading(true)
@@ -90,15 +106,40 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const cachedIds = useCachedIds()
   const batch = useBatchSelection()
   const rowKey = (music: LX.Music.MusicInfoOnline, index: number) => `${music.source}_${music.id}_${index}`
-  const getSelected = () => results.filter((m, i) => batch.selected.includes(rowKey(m, i)))
 
+  // 平台名取音源中文名；选项只列本次结果里实际出现的平台/音质
+  const sourceName = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const s of musicSdk.sources) map[String(s.id)] = String(s.name)
+    return map
+  }, [])
+  const platformOptions = useMemo(() => [
+    { id: ALL, label: '全部' },
+    ...Array.from(new Set(results.map(m => m.source))).map(id => ({ id, label: sourceName[id] ?? id })),
+  ], [results, sourceName])
+  const qualityOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const m of results) {
+      const qs = (m.meta as LX.Music.MusicInfoMeta_online | undefined)?.qualitys
+      for (const q of qs ?? []) set.add(q.type)
+    }
+    return [ALL, ...Array.from(set).sort((a, b) => QUALITY_ORDER.indexOf(a) - QUALITY_ORDER.indexOf(b))]
+  }, [results])
+  const visibleResults = useMemo(() => results.filter(m => {
+    if (platform != ALL && m.source != platform) return false
+    if (quality == ALL) return true
+    const qs = (m.meta as LX.Music.MusicInfoMeta_online | undefined)?.qualitys
+    return !!qs?.some(q => q.type == quality)
+  }), [results, platform, quality])
+
+  const getSelected = () => visibleResults.filter((m, i) => batch.selected.includes(rowKey(m, i)))
   const playAll = () => {
-    if (!results.length) return
-    insertBatchAndPlay(results)
+    if (!visibleResults.length) return
+    insertBatchAndPlay(visibleResults)
     onPlaySong()
   }
   const cacheAll = () => {
-    const n = enqueueCacheMusic(results)
+    const n = enqueueCacheMusic(visibleResults)
     toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
   }
 
@@ -117,15 +158,26 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
     return () => { cancelled = true }
   }, [query.seq, query.text])
 
+  const filterRow = (label: string, options: Array<{ id: string, label: string }>, value: string, onChange: (id: string) => void) => (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+      <Text style={{ color: colors.text3, fontSize: 12, marginRight: 4 }}>{label}</Text>
+      {options.map(o => (
+        <Chip key={o.id} colors={colors} label={o.label} active={value == o.id}
+          onPress={() => { onChange(o.id); batch.selectAll([]) }} />
+      ))}
+    </View>
+  )
+
   return (
     <View style={{ flex: 1 }}>
       <PagedSongList
         colors={colors}
-        songs={results}
+        songs={visibleResults}
         resetKey={`${query.text}_${query.seq}`}
         expanded={batch.batchMode}
         loading={loading}
         empty={searched ? undefined : null}
+        scrollSignal={searched && resultTop > 0 ? { offset: resultTop + SPACE.lg, token: query.seq } : undefined}
         header={
           <View>
             <SectionShell colors={colors}>
@@ -143,25 +195,43 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                 {displayHotWords.map((word, i) => <Chip key={`${word}_${i}`} colors={colors} label={word} onPress={() => onHotWord(word)} />)}
               </View>
             </SectionShell>
+            <SectionShell colors={colors}>
+              <SectionHeader colors={colors} title="搜索记录" hint={history.length ? `最近 ${history.length} 条` : undefined} />
+              {history.length
+                ? history.map((word, i) => (
+                    <TouchableOpacity key={`${word}_${i}`} onPress={() => onHotWord(word)}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7 }}>
+                      <Text style={{ color: colors.text3, fontSize: 12, width: 20 }}>{i + 1}</Text>
+                      <Text numberOfLines={1} style={{ color: colors.text2, fontSize: 13, flex: 1 }}>{word}</Text>
+                    </TouchableOpacity>
+                  ))
+                : <Text style={{ color: colors.text3, fontSize: 13 }}>还没有搜索记录</Text>}
+            </SectionShell>
             {searched
-              ? <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
-                  <SectionHeader
-                    colors={colors}
-                    title="搜索结果"
-                    hint={query.text}
-                    right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
-                  />
-                  <ListActionBar
-                    colors={colors}
-                    batch={batch}
-                    ids={results.map(rowKey)}
-                    songs={results}
-                    onPlayAll={playAll}
-                    onCacheAll={cacheAll}
-                    getSelected={getSelected}
-                    onAddToList={musics => setAddMusics(musics)}
-                  />
-                </SectionShell>
+              ? <View onLayout={e => setResultTop(e.nativeEvent.layout.y)}>
+                  <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
+                    <SectionHeader
+                      colors={colors}
+                      title="搜索结果"
+                      hint={query.text}
+                      right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
+                    />
+                    <View style={{ marginBottom: 4 }}>
+                      {filterRow('平台', platformOptions, platform, setPlatform)}
+                      {filterRow('音质', qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : q })), quality, setQuality)}
+                    </View>
+                    <ListActionBar
+                      colors={colors}
+                      batch={batch}
+                      ids={visibleResults.map(rowKey)}
+                      songs={visibleResults}
+                      onPlayAll={playAll}
+                      onCacheAll={cacheAll}
+                      getSelected={getSelected}
+                      onAddToList={musics => setAddMusics(musics)}
+                    />
+                  </SectionShell>
+                </View>
               : null}
             {!searched
               ? <SectionShell colors={colors}>
