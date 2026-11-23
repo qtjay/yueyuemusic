@@ -3,7 +3,9 @@
 import { init as musicSdkInit } from '@/utils/musicSdk'
 import { getUserLists, setUserList } from '@/core/list'
 import { setNavActiveId } from '../common'
-import { getViewPrevState } from '@/utils/data'
+import { getViewPrevState, getListMusics } from '@/utils/data'
+import { setMusicList } from '@/utils/listManage'
+import { LIST_IDS } from '@/config/constant'
 import { bootLog } from '@/utils/bootLog'
 import { getDislikeInfo, setDislikeInfo } from '@/core/dislikeList'
 import { unlink } from '@/utils/fs'
@@ -28,7 +30,13 @@ export default async(appSetting: LX.AppSetting) => {
   // ]).catch(err => log.error(err))
   void musicSdkInit() // 初始化音乐sdk
   bootLog('User list init...')
-  setUserList(await getUserLists()) // 获取用户列表
+  const lists = await getUserLists()
+  setUserList(lists) // 获取用户列表
+  // 预加载全部歌单歌曲，保证内存与存储一致；否则按需加载期间任何一次回写都会用空数组覆盖存储
+  await Promise.all([
+    LIST_IDS.DEFAULT, LIST_IDS.LOVE, LIST_IDS.TEMP, LIST_IDS.DOWNLOAD,
+    ...lists.map(l => l.id),
+  ].map(async id => { setMusicList(id, await getListMusics(id)) }))
   setDislikeInfo(await getDislikeInfo()) // 获取不喜欢列表
   bootLog('User list inited.')
   setNavActiveId((await getViewPrevState()).id)

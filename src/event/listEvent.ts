@@ -32,13 +32,13 @@ const checkListExist = (changedIds: string[]) => {
   setActiveList(LIST_IDS.DEFAULT)
 }
 
-export const checkUpdateList = async(changedIds: string[]) => {
+export const checkUpdateList = async(changedIds: string[], allowEmpty = false) => {
   if (!changedIds.length) return
   // 歌单歌曲是按需加载的：内存里没有的列表绝不能用 undefined 覆盖其存储，否则重启后歌曲全丢
   const data = changedIds
     .map(id => ({ id, musics: allMusicList.get(id) }))
     .filter((item): item is { id: string, musics: LX.List.ListMusics } => item.musics != null)
-  if (data.length) await saveListMusics(data)
+  if (data.length) await saveListMusics(data, allowEmpty)
   global.app_event.myListMusicUpdate(changedIds)
 }
 
@@ -164,7 +164,7 @@ export class ListEvent extends Event {
    */
   async list_music_overwrite(listId: string, musicInfos: LX.Music.MusicInfo[], isRemote: boolean = false) {
     const changedIds = await listMusicOverwrite(listId, musicInfos)
-    await checkUpdateList(changedIds)
+    await checkUpdateList(changedIds, true)
     this.emit('list_music_overwrite', listId, musicInfos, isRemote)
   }
 
@@ -191,7 +191,7 @@ export class ListEvent extends Event {
    */
   async list_music_move(fromId: string, toId: string, musicInfos: LX.Music.MusicInfo[], addMusicLocationType: LX.AddMusicLocationType, isRemote: boolean = false) {
     const changedIds = await listMusicMove(fromId, toId, musicInfos, addMusicLocationType)
-    await checkUpdateList(changedIds)
+    await checkUpdateList(changedIds, true)
     this.emit('list_music_move', fromId, toId, musicInfos, addMusicLocationType, isRemote)
   }
 
@@ -205,7 +205,7 @@ export class ListEvent extends Event {
   async list_music_remove(listId: string, ids: string[], isRemote: boolean = false) {
     const changedIds = await listMusicRemove(listId, ids)
     // console.log(changedIds)
-    await checkUpdateList(changedIds)
+    await checkUpdateList(changedIds, true)
     this.emit('list_music_remove', listId, ids, isRemote)
   }
 
@@ -227,7 +227,7 @@ export class ListEvent extends Event {
    */
   async list_music_clear(ids: string[], isRemote: boolean = false) {
     const changedIds = await listMusicClear(ids)
-    await checkUpdateList(changedIds)
+    await checkUpdateList(changedIds, true)
     this.emit('list_music_clear', ids, isRemote)
   }
 

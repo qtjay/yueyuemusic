@@ -332,11 +332,21 @@ export const getListMusics = async(listId: string): Promise<LX.Music.MusicInfo[]
  * 保存列表内歌曲
  * @param listData 列表数据
  */
-export const saveListMusics = async(listData: Array<{ id: string, musics: LX.Music.MusicInfo[] }>) => {
-  if (listData.length > 1) {
-    await saveDataMultiple(listData.map(list => ([listPrefix + list.id, list.musics])))
+export const saveListMusics = async(listData: Array<{ id: string, musics: LX.Music.MusicInfo[] }>, allowEmpty = false) => {
+  const safe: typeof listData = []
+  for (const item of listData) {
+    if (!Array.isArray(item.musics)) continue
+    if (item.musics.length || allowEmpty) { safe.push(item); continue }
+    // 歌单歌曲按需加载：内存为空但存储非空时绝不回写，避免冷启动把歌单清空
+    const stored = await getData<LX.Music.MusicInfo[]>(listPrefix + item.id)
+    if (Array.isArray(stored) && stored.length) continue
+    safe.push(item)
+  }
+  if (!safe.length) return
+  if (safe.length > 1) {
+    await saveDataMultiple(safe.map(list => ([listPrefix + list.id, list.musics])))
   } else {
-    const list = listData[0]
+    const list = safe[0]
     await saveData(listPrefix + list.id, list.musics)
   }
 }
