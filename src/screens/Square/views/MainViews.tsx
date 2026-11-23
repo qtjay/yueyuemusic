@@ -36,6 +36,19 @@ const HOT_PAGE_SIZE = 8
 const HISTORY_SIZE = 3
 const ALL = 'all'
 const QUALITY_ORDER: string[] = ['128k', '320k', 'flac', 'flac24bit', '192k', 'ape', 'wav']
+const qualityRank = (q: string) => {
+  const i = QUALITY_ORDER.indexOf(q)
+  return i < 0 ? 999 : i
+}
+/** 搜索结果的音质主要在 meta._qualitys（TrackRow 的 SQ/HQ/24bit 标签也读它），qualitys 数组常为空 */
+const getQualityKeys = (m: LX.Music.MusicInfoOnline) => {
+  const meta = m.meta as (LX.Music.MusicInfoMeta_online & { _qualitys?: Record<string, any> }) | undefined
+  const keys = new Set<string>()
+  const map = meta?._qualitys
+  if (map) for (const [k, v] of Object.entries(map)) { if (v) keys.add(k) }
+  if (Array.isArray(meta?.qualitys)) for (const q of meta.qualitys) keys.add(String(q.type))
+  return keys
+}
 
 /** 发现 / 聚合搜索：首屏 20 首，上滑时顶部模块随列表滚出 */
 export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, onHotWord, onPlaySong }: {
@@ -120,17 +133,13 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   ], [results, sourceName])
   const qualityOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const m of results) {
-      const qs = (m.meta as LX.Music.MusicInfoMeta_online | undefined)?.qualitys
-      for (const q of qs ?? []) set.add(q.type)
-    }
-    return [ALL, ...Array.from(set).sort((a, b) => QUALITY_ORDER.indexOf(a) - QUALITY_ORDER.indexOf(b))]
+    for (const m of results) for (const q of getQualityKeys(m)) set.add(q)
+    return [ALL, ...Array.from(set).sort((a, b) => qualityRank(a) - qualityRank(b))]
   }, [results])
   const visibleResults = useMemo(() => results.filter(m => {
     if (platform != ALL && m.source != platform) return false
     if (quality == ALL) return true
-    const qs = (m.meta as LX.Music.MusicInfoMeta_online | undefined)?.qualitys
-    return !!qs?.some(q => q.type == quality)
+    return getQualityKeys(m).has(quality)
   }), [results, platform, quality])
 
   const getSelected = () => visibleResults.filter((m, i) => batch.selected.includes(rowKey(m, i)))
