@@ -1,7 +1,7 @@
 {
   "name": "yueyuemusic",
   "version": "1.0.0",
-  "versionCode": 1004,
+  "versionCode": 1005,
   "private": true,
   "scripts": {
     "dev": "react-native run-android --active-arch-only",
@@ -21,6 +21,7 @@
     "clear:full": "git clean -fdx -e android/keystore.properties -e android/app/*.keystore",
     "build:theme": "node src/theme/themes/createThemes.js",
     "gen:sources": "node tools/gen-music-sources.js",
+    "bump:version": "node tools/bump-version.js",
     "publish": "node publish"
   },
   "engines": {
