@@ -5,29 +5,25 @@ import { getData, saveData } from '@/plugins/storage'
 import { toast } from '@/utils/tools'
 
 /**
- * 音源按音质分组，每组是一个有序队列（队首优先）。
- * 播放成功 → 提队首；播放失败 → 列队尾；冷启动/需要换源时从组首前三随机选。
- * 选定后保持粘性，只有播放源出问题才换。
+ * 每个音质组都装入全部音源，各组独立维护一份有序队列（队首优先）。
+ * 播放相应音质成功 → 该组队首，失败 → 该组队尾；新音源进所有组队首。
+ * 冷启动/需要换源时从当前音质组首前三随机选，选定后保持粘性。
  */
 const GROUPS_KEY = '@source_quality_groups'
 const DEFAULT_GROUP = 'default'
 const QUALITY_KEYS = ['flac24bit', 'flac', 'wav', 'ape', '320k', '192k', '128k'] as const
-const QUALITY_RANK: Record<string, number> = { flac24bit: 5, flac: 4, wav: 4, ape: 4, '320k': 2, '192k': 1, '128k': 0 }
-/** 前三候选数量 */
+const ALL_GROUPS: string[] = [...QUALITY_KEYS, DEFAULT_GROUP]
 const TOP_N = 3
 const INIT_TIMEOUT = 10_000
 
 export type SourceFailReason = 'init' | 'url' | 'load' | 'limit'
 
 interface GroupState {
-  /** 组名 -> 音源 id 有序队列 */
+  /** 组名 -> 全部音源 id 的有序队列 */
   groups: Record<string, string[]>
-  /** 音源 id -> 所属组 */
-  groupOf: Record<string, string>
 }
 
 let groups: Record<string, string[]> = {}
-let groupOf: Record<string, string> = {}
 /** 会话内当前选定的音源，冷启动重新选，选定后不轻易换 */
 let activeSourceId: string | null = null
 let loadPromise: Promise<void> | null = null
@@ -37,7 +33,7 @@ const saveGroups = () => {
   if (saveTimer) return
   saveTimer = setTimeout(() => {
     saveTimer = null
-    void saveData(GROUPS_KEY, { groups, groupOf } satisfies GroupState)
+    void saveData(GROUPS_KEY, { groups } satisfies GroupState)
   }, 1_000)
 }
 
@@ -46,99 +42,53 @@ const loadGroups = () => {
   loadPromise = getData<GroupState>(GROUPS_KEY)
     .then(saved => {
       groups = saved?.groups && typeof saved.groups == 'object' ? saved.groups : {}
-      groupOf = saved?.groupOf && typeof saved.groupOf == 'object' ? saved.groupOf : {}
       for (const key of Object.keys(groups)) {
         if (!Array.isArray(groups[key])) delete groups[key]
       }
     })
-    .catch(() => { groups = {}; groupOf = {} })
+    .catch(() => { groups = {} })
   return loadPromise
 }
 void loadGroups()
 
 const groupList = (key: string): string[] => groups[key] ?? (groups[key] = [])
 
-/** 把音源从所有组里摘出 */
-const removeFromGroups = (id: string) => {
-  for (const key of Object.keys(groups)) {
-    const arr = groups[key]
-    const i = arr.indexOf(id)
-    if (i >= 0) arr.splice(i, 1)
-  }
+/** 播放音质 -> 组名；未知音质归默认组 */
+const groupKeyOf = (quality?: string) => {
+  const q = String(quality ?? settingState.setting['player.playQuality'] ?? '128k')
+  return QUALITY_KEYS.includes(q as typeof QUALITY_KEYS[number]) ? q : DEFAULT_GROUP
 }
 
-/** 播放成功提队首 / 播放失败列队尾 */
-const moveInGroup = (id: string, toFront: boolean) => {
-  const key = groupOf[id] ?? DEFAULT_GROUP
+/** 新音源加入所有组队首，已删除的从所有组移除 */
+const syncGroups = (ids: string[]) => {
+  const alive = new Set(ids)
+  let changed = false
+  for (const key of ALL_GROUPS) {
+    const arr = groupList(key)
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!alive.has(arr[i])) { arr.splice(i, 1); changed = true }
+    }
+    const missing = ids.filter(id => !arr.includes(id))
+    if (missing.length) { arr.unshift(...missing); changed = true }
+  }
+  if (changed) saveGroups()
+}
+
+/** 只调整「该音质组」自己的队列顺序 */
+const moveInGroup = (id: string, key: string, toFront: boolean) => {
   const arr = groupList(key)
   const i = arr.indexOf(id)
   if (i >= 0) arr.splice(i, 1)
   if (toFront) arr.unshift(id)
   else arr.push(id)
-  groupOf[id] = key
   saveGroups()
 }
 
-/** 同步音源列表：新音源进默认组队尾，已删除的清掉 */
-const syncGroups = (ids: string[]) => {
-  const alive = new Set(ids)
-  for (const id of ids) {
-    const key = groupOf[id]
-    if (key && groups[key]?.includes(id)) continue
-    removeFromGroups(id)
-    groupOf[id] = DEFAULT_GROUP
-    groupList(DEFAULT_GROUP).push(id)
-  }
-  for (const id of Object.keys({ ...groupOf })) {
-    if (alive.has(id)) continue
-    removeFromGroups(id)
-    delete groupOf[id]
-  }
-  saveGroups()
-}
-
-/** 没有音质信息时归到默认组；有信息时按最高音质归组 */
-const regroupSource = (id: string, qualitys: Record<string, string[] | undefined>) => {
-  const declared = new Set<string>()
-  for (const list of Object.values(qualitys)) {
-    if (!Array.isArray(list)) continue
-    for (const q of list) declared.add(String(q))
-  }
-  let key = DEFAULT_GROUP
-  let best = -1
-  for (const q of declared) {
-    const rank = QUALITY_RANK[q]
-    if (rank != null && rank > best) { best = rank; key = q }
-  }
-  if (groupOf[id] == key && groups[key]?.includes(id)) return
-  removeFromGroups(id)
-  groupOf[id] = key
-  groupList(key).push(id)
-  saveGroups()
-}
-
-/** 当前播放音质对应的组 */
-const currentGroupKey = () => {
-  const quality = String(settingState.setting['player.playQuality'] ?? '128k')
-  return QUALITY_KEYS.includes(quality as typeof QUALITY_KEYS[number]) ? quality : DEFAULT_GROUP
-}
-
-/** 相应音质组优先，默认组作为兜底并入（首次没有音质信息时全在默认组） */
 const candidates = async(excludeId?: string): Promise<string[]> => {
   await loadGroups()
   const list = await getUserApiList()
   syncGroups(list.map(api => api.id))
-  const key = currentGroupKey()
-  const merged: string[] = []
-  const seen = new Set<string>()
-  for (const k of key == DEFAULT_GROUP ? [DEFAULT_GROUP] : [key, DEFAULT_GROUP]) {
-    for (const id of groups[k] ?? []) {
-      if (id == excludeId || seen.has(id)) continue
-      seen.add(id)
-      merged.push(id)
-    }
-  }
-  return merged
+  return groupList(groupKeyOf()).filter(id => id != excludeId)
 }
 
 /** 从组首前三随机选一个 */
@@ -169,37 +119,31 @@ export const isUserApiMode = (): boolean =>
 export const getCurrentSourceId = (): string =>
   settingState.setting['common.apiSource']
 
-/** 取链成功不改变队列顺序——只有音频真正播起来才算这个源好 */
+/** 取链成功不改变任何队列顺序——只有音频真正播起来才算成功 */
 export const markSourceSuccess = (_id: string, _ms: number) => {}
 
-/** 音频真正开始播放：提到队首 */
-export const markSourcePlaybackSuccess = (id: string, _quality?: string) => {
+/** 音频真正开始播放：提到该音质组队首 */
+export const markSourcePlaybackSuccess = (id: string, quality?: string) => {
   if (!id) return
-  moveInGroup(id, true)
+  moveInGroup(id, groupKeyOf(quality), true)
   activeSourceId = id
 }
 
 let lastPlaybackFail = { id: '', at: 0 }
-/** 播放失败：列到队尾；同一源 5s 内只处理一次（handleError 会连调两次） */
-export const markSourcePlaybackFailed = (id: string) => {
+/** 播放不成功：排到该音质组队尾；同一源 5s 内只处理一次 */
+export const markSourcePlaybackFailed = (id: string, quality?: string) => {
   if (!id) return
   const now = Date.now()
   if (lastPlaybackFail.id == id && now - lastPlaybackFail.at < 5_000) return
   lastPlaybackFail = { id, at: now }
-  moveInGroup(id, false)
+  moveInGroup(id, groupKeyOf(quality), false)
   activeSourceId = null
 }
 
-/** init 成功时按声明音质重新归组 */
-export const recordSourceQualitys = (id: string, qualitys: Record<string, string[] | undefined>) => {
-  if (!id) return
-  regroupSource(id, qualitys)
-}
-
-/** 只有脚本 init 失败才降权；限流/单曲取链失败/播放失败都不动队列 */
+/** 只有脚本 init 失败才把该源排到当前组队尾；限流/单曲取链失败不动队列 */
 export const markSourceFailed = (id: string, reason: SourceFailReason = 'init') => {
   if (!id || reason != 'init') return
-  moveInGroup(id, false)
+  moveInGroup(id, groupKeyOf(), false)
 }
 
 /**
@@ -228,7 +172,7 @@ export const switchToRandomSource = async(silent = false, excludeId?: string): P
 /** 语义化别名，供新代码使用 */
 export const switchToBestSource = switchToRandomSource
 
-/** 冷启动首次选源：从相应音质组首前三随机选一个；已是当前源则不重复 loadScript */
+/** 冷启动首次选源：从当前音质组首前三随机选一个；已是当前源则不重复 loadScript */
 export const autoSelectAvailableSource = async(): Promise<string | null> => {
   const list = await candidates()
   const id = pickTop(list, new Set<string>())

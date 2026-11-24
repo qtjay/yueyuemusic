@@ -5,7 +5,7 @@ import BackgroundTimer from 'react-native-background-timer'
 import { fetchData } from './request'
 import { getUserApiList } from '@/utils/data'
 import { initBuiltinMusicSources } from '@/core/musicSource'
-import { markSourceFailed, recordSourceQualitys, switchToRandomSource } from '@/core/musicSource/autoSelect'
+import { markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
 import { state as userApiState } from '@/store/userApi'
 import { confirmDialog, openUrl, tipDialog } from '@/utils/tools'
 
@@ -180,8 +180,6 @@ export default async(setting: LX.AppSetting) => {
           qualitys[source as LX.Source] = sourceQualitys
         }
         global.lx.qualityList = qualitys
-        // 记录该音源声明支持的音质，供后续选源做音质匹配
-        recordSourceQualitys(info.id, qualitys)
         global.lx.apis = apis
         global.state_event.apiSourceUpdated(settingState.setting['common.apiSource'])
       }

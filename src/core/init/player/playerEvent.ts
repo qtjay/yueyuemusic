@@ -19,10 +19,11 @@ export default () => {
   /** 音频加载失败时标记当前音源并随机换源，让随后的 URL 刷新走新音源 */
   const switchSourceOnError = async(reason: 'load' | 'timeout' = 'load') => {
     if (!isUserApiMode()) return
-    // 25s 缓冲超时可能只是网络慢：只由调用方刷新 URL，不换源也不降权
-    if (reason == 'timeout') return
     const failedId = getCurrentSourceId()
-    markSourcePlaybackFailed(failedId)
+    const quality = String(settingState.setting['player.playQuality'] ?? '128k')
+    markSourcePlaybackFailed(failedId, quality)
+    // 缓冲超时只由调用方刷新 URL，不换源；明确播放器错误才从组首前三重新选
+    if (reason == 'timeout') return
     await switchToRandomSource(false, failedId)
   }
 
