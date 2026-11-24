@@ -11,7 +11,7 @@ import settingState from '@/store/setting/state'
 import { requestMsg } from '@/utils/message'
 import BackgroundTimer from 'react-native-background-timer'
 import { apis } from '@/utils/musicSdk/api-source'
-import { getCurrentSourceId, isUserApiMode, markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
+import { getCurrentSourceId, isUserApiMode, markSourceFailed, markSourceSuccess, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
 
 const getOtherSourcePromises = new Map()
@@ -305,31 +305,47 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   // console.log(musicInfo.source)
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
 
-  const requestUrl = async(): Promise<{ url: string, type: LX.Quality }> => {
-    let reqPromise
+  const URL_TIMEOUT = 5_000
+  const requestUrl = async(): Promise<{ url: string, type: LX.Quality, ms: number }> => {
+    const t0 = Date.now()
+    let reqPromise: Promise<{ url: string, type: LX.Quality }>
     try {
       reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), targetQuality).promise
     } catch (err: any) {
       reqPromise = Promise.reject(err)
     }
-    return reqPromise
+    let timer: ReturnType<typeof setTimeout> | null = null
+    try {
+      const res = await Promise.race([
+        reqPromise,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('source url timeout')), URL_TIMEOUT)
+        }),
+      ])
+      return { ...res, ms: Date.now() - t0 }
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
   }
 
   let err: any
   try {
-    const { url, type } = await requestUrl()
+    const { url, type, ms } = await requestUrl()
+    // 取链成功才是有效信号：更新耗时 EMA 并清冷却
+    if (isUserApiMode()) markSourceSuccess(getCurrentSourceId(), ms)
     return { musicInfo, url, quality: type, isFromCache: false }
   } catch (e: any) {
     console.log(e)
     err = e
-    // 自定义音源取链接失败：标记该源，随机换源后重试一次
+    // 限流不是音源故障，保持当前源不做惩罚与切源
     if (isUserApiMode() && err.message != requestMsg.tooManyRequests) {
-      markSourceFailed(getCurrentSourceId())
+      markSourceFailed(getCurrentSourceId(), 'url')
       const newId = await switchToRandomSource()
       // 新音源必须支持这首歌的平台源，否则重试无意义
       if (newId && (global.lx.apis as Record<string, any> | undefined)?.[musicInfo.source]) {
         try {
-          const { url, type } = await requestUrl()
+          const { url, type, ms } = await requestUrl()
+          if (isUserApiMode()) markSourceSuccess(getCurrentSourceId(), ms)
           return { musicInfo, url, quality: type, isFromCache: false }
         } catch (retryErr: any) {
           console.log(retryErr)

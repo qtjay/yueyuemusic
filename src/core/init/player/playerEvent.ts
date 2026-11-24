@@ -18,7 +18,7 @@ export default () => {
   /** 音频加载失败时标记当前音源并随机换源，让随后的 URL 刷新走新音源 */
   const switchSourceOnError = async() => {
     if (!isUserApiMode()) return
-    markSourceFailed(getCurrentSourceId())
+    markSourceFailed(getCurrentSourceId(), 'load')
     await switchToRandomSource()
   }
 
