@@ -211,13 +211,6 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                       hint={query.text}
                       right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
                     />
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
-                      <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions}
-                        onChange={id => { setPlatform(id); batch.selectAll([]) }} />
-                      <FilterDropdown colors={colors} label="音质" value={quality}
-                        options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : (QUALITY_LABEL[q] ?? q) }))}
-                        onChange={id => { setQuality(id); batch.selectAll([]) }} />
-                    </View>
                     <ListActionBar
                       colors={colors}
                       batch={batch}
@@ -229,6 +222,18 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                       onAddToList={musics => setAddMusics(musics)}
                     />
                   </SectionShell>
+                  <View style={{
+                    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
+                    paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
+                    backgroundColor: colors.surface,
+                    borderBottomWidth: 1, borderBottomColor: colors.line,
+                  }}>
+                    <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions} large={isTablet}
+                      onChange={id => { setPlatform(id); batch.selectAll([]) }} />
+                    <FilterDropdown colors={colors} label="音质" value={quality} large={isTablet}
+                      options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : (QUALITY_LABEL[q] ?? q) }))}
+                      onChange={id => { setQuality(id); batch.selectAll([]) }} />
+                  </View>
                 </View>
               : null}
             {!searched

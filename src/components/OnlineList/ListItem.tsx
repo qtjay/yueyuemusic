@@ -94,8 +94,8 @@ const styles = createStyle({
     // width: '100%',
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    // paddingLeft: 10,
-    paddingRight: 2,
+    // 与 Square TrackRow 一致：左侧 8dp 缩进，图标不再贴边
+    paddingHorizontal: 8,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(128,128,128,0.12)',
@@ -110,7 +110,7 @@ const styles = createStyle({
   cover: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: 'rgba(128,128,128,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -119,7 +119,7 @@ const styles = createStyle({
   coverImg: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   cacheDot: {
     width: 14,

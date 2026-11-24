@@ -38,7 +38,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
       menus={sorts}
       activeId={activeId}
       onPress={({ action }) => { onSortChange(action); setActiveId(action) }}
-      fontSize={16}
+      fontSize={13}
       btnStyle={styles.button}
     >
       <View style={styles.inner}>
@@ -51,7 +51,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
 
 const styles = createStyle({
   button: {
-    minHeight: 40,
+    minHeight: 36,
     justifyContent: 'center',
     borderRadius: 999,
     backgroundColor: 'rgba(128,128,128,0.08)',
@@ -61,18 +61,18 @@ const styles = createStyle({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 36,
     paddingLeft: 16,
     paddingRight: 12,
   },
   label: {
-    fontSize: 16,
+    fontSize: 13,
     textAlign: 'center',
     paddingHorizontal: 2,
     paddingVertical: 3,
   },
   arrow: {
-    fontSize: 28,
+    fontSize: 14,
     marginLeft: 4,
   },
 })

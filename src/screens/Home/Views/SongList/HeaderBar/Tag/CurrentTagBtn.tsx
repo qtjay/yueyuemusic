@@ -42,11 +42,11 @@ const styles = createStyle({
     alignItems: 'center',
   },
   arrow: {
-    fontSize: 24,
+    fontSize: 14,
     marginLeft: 4,
   },
   btn: {
-    minHeight: 40,
+    minHeight: 36,
     paddingLeft: 16,
     paddingRight: 16,
     justifyContent: 'center',
@@ -56,7 +56,7 @@ const styles = createStyle({
     backgroundColor: 'rgba(128,128,128,0.08)',
   },
   sourceMenu: {
-    fontSize: 16,
+    fontSize: 13,
     textAlign: 'center',
     // minWidth: 70,
     // paddingTop: 10,

@@ -321,22 +321,25 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
 ListActionBar.displayName = 'ListActionBar'
 
 /** 通用下拉筛选：触发文字右侧带 ▾，点击弹出选项（沿用弹窗卡片样式） */
-export const FilterDropdown = memo(({ colors, label, value, options, onChange }: {
+export const FilterDropdown = memo(({ colors, label, value, options, onChange, large = false }: {
   colors: SquareColors
   label: string
   value: string
   options: Array<{ id: string, label: string }>
   onChange: (id: string) => void
+  /** 平板下放大到 UI.filterMinHeight / filterFontSize */
+  large?: boolean
 }) => {
   const [visible, setVisible] = useState(false)
   const current = options.find(o => o.id == value)?.label ?? '全部'
+  const fontSize = large ? UI.filterFontSize : UI.buttonFontSize
   return <>
     <TouchableOpacity
       onPress={() => setVisible(true)}
-      style={[styles.filterTrigger, { backgroundColor: colors.surface2, borderColor: colors.line }]}
+      style={[styles.filterTrigger, { minHeight: large ? UI.filterMinHeight : UI.buttonMinHeight, backgroundColor: colors.surface2, borderColor: colors.line }]}
     >
-      <Text numberOfLines={1} style={{ color: colors.text2, fontSize: UI.buttonFontSize }}>{label}：{current}</Text>
-      <Text style={{ color: colors.text3, fontSize: 12, marginLeft: 4 }}>▾</Text>
+      <Text numberOfLines={1} style={{ color: colors.text2, fontSize }}>{label}：{current}</Text>
+      <Text style={{ color: colors.text3, fontSize: large ? UI.filterFontSize : 12, marginLeft: 4 }}>▾</Text>
     </TouchableOpacity>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
       <TouchableOpacity style={styles.modalMask} activeOpacity={1} onPress={() => setVisible(false)}>

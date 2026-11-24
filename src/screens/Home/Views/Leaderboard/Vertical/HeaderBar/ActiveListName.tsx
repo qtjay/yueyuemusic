@@ -34,7 +34,7 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
         menus={menus}
         activeId={activeId}
         onPress={({ action }) => onBoundChange(action)}
-        fontSize={16}
+        fontSize={13}
         btnStyle={styles.button}
         forceDown
       >
@@ -53,7 +53,7 @@ const styles = createStyle({
     minWidth: 0,
   },
   button: {
-    minHeight: 40,
+    minHeight: 36,
     justifyContent: 'center',
     borderRadius: 999,
     backgroundColor: 'rgba(128,128,128,0.08)',
@@ -63,17 +63,17 @@ const styles = createStyle({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 36,
     paddingLeft: 14,
     paddingRight: 10,
   },
   text: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 13,
     paddingRight: 6,
   },
   arrow: {
-    fontSize: 28,
+    fontSize: 14,
     marginLeft: 4,
   },
 })

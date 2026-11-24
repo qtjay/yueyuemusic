@@ -57,6 +57,9 @@ export const UI = {
   iconButtonSize: 32,
   dragHandleSize: 44,
   headerFontSize: 14,
+  /** 平板下所有筛选菜单统一尺寸（2026-11-25 用户指定） */
+  filterMinHeight: 36,
+  filterFontSize: 13,
 } as const
 
 export const SIDEBAR_W = 200
