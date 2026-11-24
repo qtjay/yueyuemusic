@@ -11,7 +11,8 @@ const LAST_GOOD_KEY = '@last_good_source'
 const FAILED_SOURCES_KEY = '@failed_sources_24h'
 
 const DEFAULT_MS = 1500
-const INIT_TIMEOUT = 3_000
+// init 是加载音源脚本（部分混淆脚本 600KB+），太短会误杀一批源导致 global.lx.apis 始终不就绪
+const INIT_TIMEOUT = 10_000
 /** 连续失败 1 / 2 / 3 / ≥4 次的冷却时长 */
 const COOLDOWN = [0, 60_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
 /** 单曲取链失败的短冷却：只移出候选，不升级连败 */
@@ -189,6 +190,12 @@ export const autoSelectAvailableSource = async(): Promise<string | null> => {
   await loadStats()
   const list = await getUserApiList()
   if (!list.length) return null
+  // init 流程已经 setApiSource 过一次；重复 loadScript 会让两次 init 回调错配，
+  // handleStateChange 的 id 守卫会丢结果，导致 global.lx.apis 一直为空
+  const current = getCurrentSourceId()
+  if (/^user_api/.test(current) && list.some(api => api.id == current) && !isCooling(stats[current])) {
+    return current
+  }
   if (lastGood && list.some(api => api.id == lastGood) && !isCooling(stats[lastGood])) {
     setApiSource(lastGood)
     return lastGood
