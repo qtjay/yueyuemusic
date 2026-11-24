@@ -298,8 +298,9 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
 }> => {
   if (!await global.lx.apiInitPromise[0]) {
     // 当前音源脚本初始化失败：自动随机换源后重试
-    markSourceFailed(getCurrentSourceId())
-    const newId = await switchToRandomSource()
+    const failedId = getCurrentSourceId()
+    markSourceFailed(failedId)
+    const newId = await switchToRandomSource(false, failedId)
     if (!newId || !await global.lx.apiInitPromise[0]) throw new Error('source init failed')
   }
   // console.log(musicInfo.source)
@@ -340,8 +341,9 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
     err = e
     // 限流不是音源故障，保持当前源不做惩罚与切源
     if (isUserApiMode() && err.message != requestMsg.tooManyRequests) {
-      markSourceFailed(getCurrentSourceId(), 'url')
-      const newId = await switchToRandomSource()
+      const failedId = getCurrentSourceId()
+      markSourceFailed(failedId, 'url')
+      const newId = await switchToRandomSource(false, failedId)
       // 新音源必须支持这首歌的平台源，否则重试无意义
       if (newId && (global.lx.apis as Record<string, any> | undefined)?.[musicInfo.source]) {
         try {

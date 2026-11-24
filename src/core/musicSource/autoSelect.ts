@@ -14,6 +14,8 @@ const DEFAULT_MS = 1500
 const INIT_TIMEOUT = 3_000
 /** 连续失败 1 / 2 / 3 / ≥4 次的冷却时长 */
 const COOLDOWN = [0, 60_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
+/** 单曲取链失败的短冷却：只移出候选，不升级连败 */
+const URL_FAIL_COOLDOWN = 20_000
 
 export type SourceFailReason = 'init' | 'url' | 'load' | 'limit'
 
@@ -108,7 +110,10 @@ export const markSourceFailed = (id: string, reason: SourceFailReason = 'init') 
   if (!id || reason == 'limit') return
   const s = getStat(id)
   s.fail += reason == 'url' ? 0.5 : 1
-  if (reason != 'url') {
+  if (reason == 'url') {
+    // 单曲取链失败不升级连败，但要短暂移出候选，否则换源会立刻选回自己
+    s.cooldownUntil = Math.max(s.cooldownUntil, Date.now() + URL_FAIL_COOLDOWN)
+  } else {
     s.streak++
     s.cooldownUntil = Date.now() + COOLDOWN[Math.min(s.streak, COOLDOWN.length - 1)]
   }
@@ -147,8 +152,13 @@ const rankSources = async() => {
  * init 短超时 3s，失败即按原因惩罚并换下一个；第 2 次换源就提示用户。
  * @returns 成功启用的音源 id，全部失败返回 null
  */
-export const switchToRandomSource = async(silent = false): Promise<string | null> => {
-  const ranked = await rankSources()
+export const switchToRandomSource = async(silent = false, excludeId?: string): Promise<string | null> => {
+  let ranked = await rankSources()
+  // 取链失败时必须排除当前源，避免评分仍把它排第一而原地打转
+  if (excludeId) {
+    const rest = ranked.filter(x => x.api.id != excludeId)
+    if (rest.length) ranked = rest
+  }
   if (!ranked.length) return null
 
   let notified = false
