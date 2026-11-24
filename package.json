@@ -1,7 +1,7 @@
 {
   "name": "yueyuemusic",
   "version": "1.0.0",
-  "versionCode": 1007,
+  "versionCode": 1008,
   "private": true,
   "scripts": {
     "dev": "react-native run-android --active-arch-only",

@@ -36,6 +36,7 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
         onPress={({ action }) => onBoundChange(action)}
         fontSize={13}
         btnStyle={styles.button}
+        menuWidth={160}
         forceDown
       >
         <View style={styles.inner}>
@@ -49,10 +50,14 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
 
 const styles = createStyle({
   container: {
-    flex: 1,
+    // 与热门歌单的筛选药丸一致：按内容自适应，不占满 HeaderBar 剩余宽度
+    alignSelf: 'flex-start',
+    flexShrink: 1,
     minWidth: 0,
+    maxWidth: 220,
   },
   button: {
+    alignSelf: 'flex-start',
     minHeight: 36,
     justifyContent: 'center',
     borderRadius: 999,
@@ -70,7 +75,8 @@ const styles = createStyle({
     paddingRight: 14,
   },
   text: {
-    flex: 1,
+    // 不拉伸：文字按榜单名长度自适应，过长时由 numberOfLines 截断
+    flexShrink: 1,
     fontSize: 13,
     paddingRight: 6,
   },

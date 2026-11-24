@@ -30,7 +30,7 @@ export const useSourceListI18n = (list: Sources) => {
   }, [list, sourceNameType, t])
 }
 
-const Component = <S extends Sources>({ fontSize = 16, center, forceDown, onSourceChange }: SourceSelectorProps<S>, ref: Ref<SourceSelectorType<S>>) => {
+const Component = <S extends Sources>({ fontSize = 13, center, forceDown, onSourceChange }: SourceSelectorProps<S>, ref: Ref<SourceSelectorType<S>>) => {
   const sourceNameType = useSettingValue('common.sourceNameType')
   const [list, setList] = useState([] as unknown as S)
   const [source, setSource] = useState<S[number]>('kw')
@@ -80,16 +80,16 @@ const styles = createStyle({
     alignItems: 'center',
   },
   arrow: {
-    fontSize: 24,
+    // 与其他筛选药丸一致：13 号字 + 14 号 ▾
+    fontSize: 14,
     marginLeft: 4,
   },
   sourceMenu: {
     height: '100%',
     justifyContent: 'center',
-    // paddingTop: 12,
-    // paddingBottom: 12,
-    paddingLeft: 16,
-    paddingRight: 16,
+    // 与实时热搜 Chip / SortTab / FilterDropdown 统一为 14 内边距
+    paddingLeft: 14,
+    paddingRight: 14,
     // backgroundColor: '#ccc',
 
   },
