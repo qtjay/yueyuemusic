@@ -188,6 +188,19 @@ export const switchToRandomSource = async(silent = false, excludeId?: string): P
 /** 语义化别名，供新代码使用 */
 export const switchToBestSource = switchToRandomSource
 
+/** 用户在设置里手动选为当前源：所有音质组都把它提到队首（自动换源不调用） */
+export const promoteSourceInAllGroups = async(id: string) => {
+  if (!id) return
+  await loadGroups()
+  const list = await getUserApiList()
+  // 内置音源 / 已删除的源不在分组队列里，无需处理
+  if (!list.some(api => api.id == id)) return
+  syncGroups(list.map(api => api.id))
+  for (const key of ALL_GROUPS) moveInGroup(id, key, true)
+  activeSourceId = id
+  console.log(`[source-groups] user-select ${sourceNames[id] ?? id} -> all groups head`)
+}
+
 /** 冷启动首次选源：从当前音质组首前三随机选一个；已是当前源则不重复 loadScript */
 export const autoSelectAvailableSource = async(): Promise<string | null> => {
   const list = await candidates()

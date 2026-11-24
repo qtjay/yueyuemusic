@@ -6,6 +6,7 @@ import SubTitle from '../../components/SubTitle'
 import CheckBox from '@/components/common/CheckBox'
 import { createStyle } from '@/utils/tools'
 import { setApiSource } from '@/core/apiSource'
+import { promoteSourceInAllGroups } from '@/core/musicSource/autoSelect'
 import { useI18n } from '@/lang'
 import apiSourceInfo from '@/utils/musicSdk/api-source-info'
 import { useSettingValue } from '@/store/setting/hook'
@@ -62,6 +63,8 @@ export default memo(() => {
   })), [t])
   const setApiSourceId = useCallback((id: string) => {
     setApiSource(id)
+    // 手动选择是强意图：所有音质组都提到队首，自动换源不走这里
+    void promoteSourceInAllGroups(id)
   }, [])
   const userApiListRaw = useUserApiList()
   const apiStatus = useStatus()
