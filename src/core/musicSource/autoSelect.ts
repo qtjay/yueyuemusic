@@ -24,6 +24,8 @@ interface GroupState {
 }
 
 let groups: Record<string, string[]> = {}
+/** id -> 音源标题，供切换提示显示名称而不是 user_api_xxx */
+const sourceNames: Record<string, string> = {}
 /** 会话内当前选定的音源，冷启动重新选，选定后不轻易换 */
 let activeSourceId: string | null = null
 let loadPromise: Promise<void> | null = null
@@ -99,6 +101,7 @@ const logGroupsOnce = (list: Array<{ id: string, name: string }>) => {
 const candidates = async(excludeId?: string): Promise<string[]> => {
   await loadGroups()
   const list = await getUserApiList()
+  for (const api of list) sourceNames[api.id] = api.name
   syncGroups(list.map(api => api.id))
   logGroupsOnce(list)
   return groupList(groupKeyOf()).filter(id => id != excludeId)
@@ -174,7 +177,7 @@ export const switchToRandomSource = async(silent = false, excludeId?: string): P
     setApiSource(id)
     if (await waitApiInit()) {
       activeSourceId = id
-      if (!silent) toast(`已启用音源：${id}`)
+      if (!silent) toast(`已启用音源：${sourceNames[id] ?? id}`)
       return id
     }
     markSourceFailed(id, 'init')

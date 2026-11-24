@@ -961,7 +961,8 @@ const styles = StyleSheet.create({
   editBtn: { flex: 1, minHeight: UI.buttonMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: UI.buttonRadius, paddingHorizontal: UI.buttonPaddingH, marginLeft: UI.buttonGap },
   editBtnText: { fontSize: UI.buttonFontSize },
   folderIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
-  playlistCover: { width: 22, height: 22, borderRadius: RADIUS.sm },
+  // 歌曲行封面 40×40 配 RADIUS.sm；歌单图标按尺寸等比缩小圆角，保持同样的圆角矩形观感
+  playlistCover: { width: 22, height: 22, borderRadius: RADIUS.sm / 2 },
   dragHandle: { width: UI.dragHandleSize, height: UI.dragHandleSize, alignItems: 'center', justifyContent: 'center' },
   manageName: { fontSize: 13, paddingVertical: 10 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
