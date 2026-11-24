@@ -5,7 +5,7 @@ import { isActive } from '@/utils/tools'
 import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
 import { setNowPlayTime } from '@/core/player/progress'
-import { getCurrentSourceId, isUserApiMode, markSourceFailed, markSourcePlaybackFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
+import { getCurrentSourceId, isUserApiMode, markSourceFailed, markSourcePlaybackFailed, markSourcePlaybackSuccess, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
 
 export default () => {
@@ -16,12 +16,13 @@ export default () => {
   let delayNextTimeout: number | null = null
 
   /** 音频加载失败时标记当前音源并随机换源，让随后的 URL 刷新走新音源 */
-  const switchSourceOnError = async() => {
+  const switchSourceOnError = async(reason: 'load' | 'timeout' = 'load') => {
     if (!isUserApiMode()) return
     const failedId = getCurrentSourceId()
     // 播放层失败独立于取链成功：否则「拿到 URL」会反复清零惩罚，坏源永远排第一
     markSourcePlaybackFailed(failedId)
-    markSourceFailed(failedId, 'load')
+    // 25s 缓冲超时可能只是网络慢，按单曲级轻罚；明确的播放器错误才重罚
+    markSourceFailed(failedId, reason == 'timeout' ? 'url' : 'load')
     await switchToRandomSource(false, failedId)
   }
 
@@ -35,7 +36,7 @@ export default () => {
         void playNext(true)
       } else {
         prevTimeoutId = playerState.musicInfo.id
-        await switchSourceOnError()
+        await switchSourceOnError('timeout')
         if (playerState.playMusicInfo.musicInfo) setMusicUrl(playerState.playMusicInfo.musicInfo, true)
       }
     }, 25000)
@@ -82,6 +83,8 @@ export default () => {
   const handlePlaying = () => {
     setStatusText('')
     clearLoadingTimeout()
+    // 音频真正开始播放，才允许清零播放层连败（取链成功不算）
+    if (isUserApiMode()) markSourcePlaybackSuccess(getCurrentSourceId())
   }
 
   const handleEmpied = () => {

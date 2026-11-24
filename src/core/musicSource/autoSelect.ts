@@ -17,8 +17,8 @@ const INIT_TIMEOUT = 10_000
 const COOLDOWN = [0, 60_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
 /** 单曲取链失败的短冷却：只移出候选，不升级连败 */
 const URL_FAIL_COOLDOWN = 20_000
-/** 播放层失败（如音频源站 522）的独立冷却，取链成功不能清零 */
-const PLAYBACK_FAIL_COOLDOWN = 5 * 60_000
+/** 播放层连续失败分级冷却：偶发一次只罚 20s，持续 522 逐步升到 24h */
+const PLAYBACK_COOLDOWN = [20_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
 
 export type SourceFailReason = 'init' | 'url' | 'load' | 'limit'
 
@@ -33,13 +33,15 @@ interface SourceStat {
   lastOkAt: number
   /** 播放层失败（音频源站不可用）的过期时间，独立于取链评分 */
   playbackFailUntil: number
+  /** 播放层连续失败次数，只有「真正开始播放」才清零 */
+  playbackStreak: number
 }
 
 let stats: Record<string, SourceStat> = {}
 let lastGood: string | null = null
 let loadPromise: Promise<void> | null = null
 
-const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0, playbackFailUntil: 0 })
+const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0, playbackFailUntil: 0, playbackStreak: 0 })
 const getStat = (id: string) => stats[id] ?? (stats[id] = freshStat())
 
 /** 统计落盘节流：每首歌都写两次 storage 会拖慢首播，1s 内合并一次 */
@@ -110,14 +112,30 @@ export const markSourceSuccess = (id: string, ms: number) => {
   persistStats()
 }
 
+let lastPlaybackFail = { id: '', at: 0 }
+
 /**
- * 播放层失败上报：音频源站不可用（HTTP 5xx / 缓冲超时）。
- * 取链成功只说明 URL 拿到了，不代表能播，因此这个标记不能被 markSourceSuccess 清零。
+ * 播放层失败上报：分级加重，同一源 5s 内只记一次（handleError 会连调两次）。
+ * 取链成功不清零，只有音频真正开始播放才清零，避免偶发缓冲慢误伤好源。
  */
 export const markSourcePlaybackFailed = (id: string) => {
   if (!id) return
+  const now = Date.now()
+  if (lastPlaybackFail.id == id && now - lastPlaybackFail.at < 5_000) return
+  lastPlaybackFail = { id, at: now }
   const s = getStat(id)
-  s.playbackFailUntil = Date.now() + PLAYBACK_FAIL_COOLDOWN
+  s.playbackStreak++
+  s.playbackFailUntil = now + PLAYBACK_COOLDOWN[Math.min(s.playbackStreak, PLAYBACK_COOLDOWN.length - 1)]
+  persistStats()
+}
+
+/** 音频真正开始播放：清零播放层连败，这是「该源可用」最可靠的信号 */
+export const markSourcePlaybackSuccess = (id: string) => {
+  if (!id) return
+  const s = getStat(id)
+  if (!s.playbackStreak && !s.playbackFailUntil) return
+  s.playbackStreak = 0
+  s.playbackFailUntil = 0
   persistStats()
 }
 
