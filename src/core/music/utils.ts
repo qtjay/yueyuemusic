@@ -305,7 +305,8 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   // console.log(musicInfo.source)
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
 
-  const URL_TIMEOUT = 5_000
+  // 兜底超时，不用来「砍慢源」：真实耗时由 markSourceSuccess 记入 EMA，慢源自然排后
+  const URL_TIMEOUT = 12_000
   const requestUrl = async(): Promise<{ url: string, type: LX.Quality, ms: number }> => {
     const t0 = Date.now()
     let reqPromise: Promise<{ url: string, type: LX.Quality }>
