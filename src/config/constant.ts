@@ -1,3 +1,8 @@
+// 版本信息直接取自 package.json，与 build.gradle 的 versionName / versionCode 保持一致
+const pkg = require('../../package.json') as { version?: string, versionCode?: number }
+export const APP_VERSION = pkg.version ?? '1.0.0'
+export const APP_VERSION_CODE = pkg.versionCode ?? 0
+
 export const HEADER_HEIGHT = 42
 export const LIST_ITEM_HEIGHT = 54
 export const LIST_SCROLL_POSITION_KEY = '__LIST_SCROLL_POSITION_KEY__'

@@ -19,10 +19,10 @@ for (const comp of [Text, TextInput] as any[]) {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'discover', label: '发现音乐', icon: 'search-2' },
+  { id: 'playing', label: '正在播放', icon: 'play' },
   { id: 'songlist', label: '热门歌单', icon: 'album' },
   { id: 'leaderboard', label: '排行榜', icon: 'leaderboard' },
   { id: 'mylist', label: '我的歌单', icon: 'love' },
-  { id: 'playing', label: '正在播放', icon: 'play' },
   { id: 'cache', label: '缓存管理', icon: 'download-2' },
   { id: 'setting', label: '设置', icon: 'setting' },
 ]

@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Image, Modal, PanResponder, ScrollView, St
 import { Icon } from '@/components/common/Icon'
 import { playNext, playPrev, togglePlay, collectMusic, uncollectMusic } from '@/core/player/player'
 import { insertBatchLater } from '@/core/player/playQueue'
-import { LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
+import { APP_VERSION, APP_VERSION_CODE, LIST_IDS, MUSIC_TOGGLE_MODE } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { getListMusicSync } from '@/utils/listManage'
@@ -542,6 +542,11 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
         )
       })}
     </View>
+    <View style={styles.navFooter}>
+      <Text style={[styles.navVersion, { color: colors.text3 }]} numberOfLines={1}>
+        v{APP_VERSION} · 内部版本 {APP_VERSION_CODE}
+      </Text>
+    </View>
   </View>
 ))
 SideNav.displayName = 'SideNav'
@@ -774,8 +779,10 @@ const styles = StyleSheet.create({
     marginRight: UI.buttonGap, marginBottom: 4,
   },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8, alignSelf: 'flex-end' },
-  sideNav: { width: 200, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
+  sideNav: { width: 200, flex: 1, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
   navItems: { flexShrink: 0 },
+  navFooter: { marginTop: 'auto', paddingHorizontal: SPACE.sm, paddingTop: SPACE.md, paddingBottom: SPACE.lg },
+  navVersion: { fontSize: 11 },
   brand: { flexDirection: 'column', alignItems: 'flex-start', paddingHorizontal: SPACE.sm, marginBottom: SPACE.xl },
   brandRow: { flexDirection: 'row', alignItems: 'center' },
   brandMark: { width: 36, height: 36, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.sm },

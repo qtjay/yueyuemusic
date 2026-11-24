@@ -17,6 +17,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import listState from '@/store/list/state'
 import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
+import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import { getUserLists } from '@/utils/data'
 import { toast, confirmDialog } from '@/utils/tools'
 import {
@@ -70,6 +71,31 @@ const QUEUE_STATUS_TEXT: Record<string, string> = {
   done: '已完成',
   skipped: '已缓存',
   failed: '失败',
+}
+
+/** 歌单图标取歌单内第一首歌的封面，取不到时回退文件夹图标 */
+const PlaylistCover = ({ listId, colors }: { listId: string, colors: SquareColors }) => {
+  const first = getListMusicSync(listId)[0] as LX.Music.MusicInfoOnline | undefined
+  const firstKey = first ? `${first.source}_${first.id}` : ''
+  const [cover, setCover] = useState('')
+  useEffect(() => {
+    if (!first) { setCover(''); return }
+    const cached = getCachedMusicCover(first)
+    if (cached) { setCover(cached); return }
+    let cancelled = false
+    setCover('')
+    void loadMusicCover(first).then(url => {
+      if (!cancelled && url) setCover(url)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [firstKey, listId])
+  return (
+    <View style={styles.folderIcon}>
+      {cover
+        ? <Image source={{ uri: cover }} style={styles.playlistCover} resizeMode="cover" />
+        : <Icon name="add_folder" color={colors.text2} size={20} />}
+    </View>
+  )
 }
 
 /** 我的歌单：两级页面（歌单列表 → 歌曲列表），编辑态统一套用 UI 全局默认尺寸 */
@@ -354,7 +380,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                         ? <TouchableOpacity onPress={() => toggleSelect(list.id)} style={[styles.checkBox, styles.editCheckBox, { borderColor: colors.accent }]}>
                             <Text style={{ color: colors.accent, fontSize: 10 }}>{active ? '✓' : ''}</Text>
                           </TouchableOpacity>
-                        : <View style={styles.folderIcon}><Icon name="add_folder" color={colors.text2} size={20} /></View>}
+                        : <PlaylistCover listId={list.id} colors={colors} />}
                       <TouchableOpacity onPress={() => editing ? toggleSelect(list.id) : openList(list.id)} style={{ flex: 1 }}>
                         <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
                         <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
@@ -670,11 +696,9 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
   onOpenAdvanced: () => void
   onBack: () => void
 }) => {
-  const quality = useSettingValue('player.playQuality')
   const apiModalRef = useRef<UserApiEditModalType>(null)
 
   const isDark = useColorMode()
-  const qualities: LX.Quality[] = ['128k', '320k', 'flac']
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
@@ -690,16 +714,6 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
         <Text style={[styles.hint, { color: colors.text3 }]}>
           音源由应用自动选择，播放失败时自动切换，无需手动干预
         </Text>
-      </SectionShell>
-
-      <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="播放" />
-        <Text style={[styles.hint, { color: colors.text3, marginBottom: SPACE.sm }]}>播放音质</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {qualities.map(q => (
-            <Chip key={q} colors={colors} label={q} active={q == quality} onPress={() => updateSetting({ 'player.playQuality': q })} />
-          ))}
-        </View>
       </SectionShell>
 
       <SectionShell colors={colors}>
@@ -947,6 +961,7 @@ const styles = StyleSheet.create({
   editBtn: { flex: 1, minHeight: UI.buttonMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: UI.buttonRadius, paddingHorizontal: UI.buttonPaddingH, marginLeft: UI.buttonGap },
   editBtnText: { fontSize: UI.buttonFontSize },
   folderIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  playlistCover: { width: 22, height: 22, borderRadius: RADIUS.sm },
   dragHandle: { width: UI.dragHandleSize, height: UI.dragHandleSize, alignItems: 'center', justifyContent: 'center' },
   manageName: { fontSize: 13, paddingVertical: 10 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
