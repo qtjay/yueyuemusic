@@ -4,6 +4,7 @@ import { getPosition, isEmpty, setStop } from '@/plugins/player'
 import { isActive } from '@/utils/tools'
 import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
+import settingState from '@/store/setting/state'
 import { setNowPlayTime } from '@/core/player/progress'
 import { getCurrentSourceId, isUserApiMode, markSourceFailed, markSourcePlaybackFailed, markSourcePlaybackSuccess, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
@@ -83,8 +84,10 @@ export default () => {
   const handlePlaying = () => {
     setStatusText('')
     clearLoadingTimeout()
-    // 音频真正开始播放，才允许清零播放层连败（取链成功不算）
-    if (isUserApiMode()) markSourcePlaybackSuccess(getCurrentSourceId())
+    // 音频真正开始播放，才允许清零播放层失败（取链成功不算），并记录实际成功的音质
+    if (isUserApiMode()) {
+      markSourcePlaybackSuccess(getCurrentSourceId(), String(settingState.setting['player.playQuality'] ?? '128k'))
+    }
   }
 
   const handleEmpied = () => {

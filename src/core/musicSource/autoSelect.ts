@@ -17,8 +17,10 @@ const INIT_TIMEOUT = 10_000
 const COOLDOWN = [0, 60_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
 /** 单曲取链失败的短冷却：只移出候选，不升级连败 */
 const URL_FAIL_COOLDOWN = 20_000
-/** 播放层连续失败分级冷却：偶发一次只罚 20s，持续 522 逐步升到 24h */
-const PLAYBACK_COOLDOWN = [20_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
+/** 播放层连续失败分级冷却：失败源要在最低档待够久，避免不停重试 */
+const PLAYBACK_COOLDOWN = [60_000, 10 * 60_000, 60 * 60_000, 24 * 60 * 60 * 1000]
+/** 音质由高到低，用于把「声明支持的音质」转成可比分数 */
+const QUALITY_RANK: Record<string, number> = { flac24bit: 5, flac: 4, wav: 4, ape: 4, '320k': 2, '192k': 1, '128k': 0 }
 
 export type SourceFailReason = 'init' | 'url' | 'load' | 'limit'
 
@@ -35,13 +37,19 @@ interface SourceStat {
   playbackFailUntil: number
   /** 播放层连续失败次数，只有「真正开始播放」才清零 */
   playbackStreak: number
+  /** 音频真正播放成功的次数：三档优先级的最高档依据 */
+  playSuccess: number
+  /** 曾成功播放过的音质 */
+  okQualitys: string[]
+  /** init 时声明支持的音质（合并各平台），未 init 过的源为空 */
+  qualitys: string[]
 }
 
 let stats: Record<string, SourceStat> = {}
 let lastGood: string | null = null
 let loadPromise: Promise<void> | null = null
 
-const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0, playbackFailUntil: 0, playbackStreak: 0 })
+const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0, playbackFailUntil: 0, playbackStreak: 0, playSuccess: 0, okQualitys: [], qualitys: [] })
 const getStat = (id: string) => stats[id] ?? (stats[id] = freshStat())
 
 /** 统计落盘节流：每首歌都写两次 storage 会拖慢首播，1s 内合并一次 */
@@ -65,7 +73,12 @@ const loadStats = () => {
     const now = Date.now()
     const loaded: Record<string, SourceStat> = {}
     for (const [id, s] of Object.entries(saved ?? {})) {
-      if (s && typeof s == 'object') loaded[id] = { ...freshStat(), ...s }
+      if (s && typeof s == 'object') {
+        const merged = { ...freshStat(), ...s }
+        if (!Array.isArray(merged.okQualitys)) merged.okQualitys = []
+        if (!Array.isArray(merged.qualitys)) merged.qualitys = []
+        loaded[id] = merged
+      }
     }
     // 旧版 24h 拉黑迁移为最高级冷却，避免升级后坏源突然全量放行
     for (const [id, expireAt] of Object.entries(legacy ?? {})) {
@@ -129,13 +142,33 @@ export const markSourcePlaybackFailed = (id: string) => {
   persistStats()
 }
 
-/** 音频真正开始播放：清零播放层连败，这是「该源可用」最可靠的信号 */
-export const markSourcePlaybackSuccess = (id: string) => {
+/** 音频真正开始播放：记为最高优先级，清零全部失败标记并记录成功音质 */
+export const markSourcePlaybackSuccess = (id: string, quality?: string) => {
   if (!id) return
   const s = getStat(id)
-  if (!s.playbackStreak && !s.playbackFailUntil) return
+  s.playSuccess++
   s.playbackStreak = 0
   s.playbackFailUntil = 0
+  s.cooldownUntil = 0
+  s.streak = 0
+  s.lastOkAt = Date.now()
+  if (quality && !s.okQualitys.includes(quality)) s.okQualitys.push(quality)
+  lastGood = id
+  persistStats()
+}
+
+/** init 成功时记录该音源声明支持的音质（合并各平台），供选源时做音质匹配 */
+export const recordSourceQualitys = (id: string, qualitys: Record<string, string[] | undefined>) => {
+  if (!id) return
+  const s = getStat(id)
+  const set = new Set(s.qualitys)
+  for (const list of Object.values(qualitys)) {
+    if (!Array.isArray(list)) continue
+    for (const q of list) set.add(String(q))
+  }
+  const next = [...set]
+  if (next.length == s.qualitys.length && next.every(q => s.qualitys.includes(q))) return
+  s.qualitys = next
   persistStats()
 }
 
@@ -147,7 +180,9 @@ export const markSourceFailed = (id: string, reason: SourceFailReason = 'init') 
   if (reason == 'url') {
     // 单曲取链失败不升级连败，但要短暂移出候选，否则换源会立刻选回自己
     s.cooldownUntil = Math.max(s.cooldownUntil, Date.now() + URL_FAIL_COOLDOWN)
-  } else {
+  } else if (reason != 'load') {
+    // 播放层失败由 markSourcePlaybackFailed 独立分级，不占用取链层 streak，
+    // 否则下一次「取链成功」会把这份惩罚清零，坏源又被排到前面
     s.streak++
     s.cooldownUntil = Date.now() + COOLDOWN[Math.min(s.streak, COOLDOWN.length - 1)]
   }
@@ -169,23 +204,43 @@ const waitApiInit = async(timeout = INIT_TIMEOUT): Promise<boolean> => {
   }
 }
 
-/** 按期望等待时间排序，跳过冷却中的源；全冷却时按评分兜底 */
+/**
+ * 三档优先级：0=播放成功过（最高）、1=完全未试过、2=失败过（最低）。
+ * 档内：当前音质匹配 > 曾成功的最高音质 > 期望耗时 > 播放成功次数。
+ */
 const rankSources = async() => {
   await loadStats()
   const list = await getUserApiList()
   const now = Date.now()
+  const wantQuality = String(settingState.setting['player.playQuality'] ?? '128k')
+  const wantRank = QUALITY_RANK[wantQuality] ?? 0
+
   const scored = list.map(api => {
     const s = stats[api.id]
     const cooling = isCooling(s) || (s?.playbackFailUntil ?? 0) > now
-    return { api, cooling, score: expectedMs(s) }
+    const failed = !!s && (s.playbackStreak > 0 || s.fail > 0 || s.streak > 0)
+    const tier = !s || (!failed && s.playSuccess == 0 && !s.qualitys.length) ? 1
+      : s.playSuccess > 0 && !cooling ? 0 : 2
+    // 声明支持的音质里没有当前音质 → 降权；曾以不低于当前音质播成功 → 优先
+    const proven = s ? Math.max(-1, ...s.okQualitys.map(q => QUALITY_RANK[q] ?? 0)) : -1
+    const declared = s ? Math.max(-1, ...s.qualitys.map(q => QUALITY_RANK[q] ?? 0)) : -1
+    const qualityScore = s && s.qualitys.length && declared < wantRank ? 2
+      : proven >= wantRank ? 0 : 1
+    return { api, cooling, tier, qualityScore, proven, score: expectedMs(s), playSuccess: s?.playSuccess ?? 0 }
   })
   const usable = scored.filter(x => !x.cooling)
-  return (usable.length ? usable : scored).sort((a, b) => a.score - b.score)
+  return (usable.length ? usable : scored).sort((a, b) =>
+    a.tier - b.tier ||
+    a.qualityScore - b.qualityScore ||
+    b.proven - a.proven ||
+    a.score - b.score ||
+    b.playSuccess - a.playSuccess
+  )
 }
 
 /**
- * 按评分顺序切换音源（保留旧函数名供现有调用点使用）。
- * init 短超时 3s，失败即按原因惩罚并换下一个；第 2 次换源就提示用户。
+ * 按三档优先级顺序切换音源（保留旧函数名供现有调用点使用）。
+ * init 超时 10s，失败即按原因惩罚并换下一个；第 2 次换源就提示用户。
  * @returns 成功启用的音源 id，全部失败返回 null
  */
 export const switchToRandomSource = async(silent = false, excludeId?: string): Promise<string | null> => {
@@ -217,10 +272,7 @@ export const switchToRandomSource = async(silent = false, excludeId?: string): P
 /** 语义化别名，供新代码使用 */
 export const switchToBestSource = switchToRandomSource
 
-/**
- * 启动时直接启用上次成功的音源，不做串行探测（探测交给后续真实播放）。
- * lastGood 失效或在冷却中时才回退到按评分选源。
- */
+/** 启动时按三档优先级选 Top1，不做串行探测；已是当前源则不重复 loadScript */
 export const autoSelectAvailableSource = async(): Promise<string | null> => {
   // 不再无条件直连 current / lastGood：按评分选 Top1，坏源（含播放失败冷却）自然被排除。
   // 若 Top1 恰好是当前源则不重复 setApiSource，避免二次 loadScript 让 init 回调错配。
