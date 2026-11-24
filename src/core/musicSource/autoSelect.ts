@@ -17,6 +17,8 @@ const INIT_TIMEOUT = 10_000
 const COOLDOWN = [0, 60_000, 5 * 60_000, 30 * 60_000, 24 * 60 * 60 * 1000]
 /** 单曲取链失败的短冷却：只移出候选，不升级连败 */
 const URL_FAIL_COOLDOWN = 20_000
+/** 播放层失败（如音频源站 522）的独立冷却，取链成功不能清零 */
+const PLAYBACK_FAIL_COOLDOWN = 5 * 60_000
 
 export type SourceFailReason = 'init' | 'url' | 'load' | 'limit'
 
@@ -29,13 +31,15 @@ interface SourceStat {
   streak: number
   cooldownUntil: number
   lastOkAt: number
+  /** 播放层失败（音频源站不可用）的过期时间，独立于取链评分 */
+  playbackFailUntil: number
 }
 
 let stats: Record<string, SourceStat> = {}
 let lastGood: string | null = null
 let loadPromise: Promise<void> | null = null
 
-const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0 })
+const freshStat = (): SourceStat => ({ ok: 0, fail: 0, emaMs: 0, streak: 0, cooldownUntil: 0, lastOkAt: 0, playbackFailUntil: 0 })
 const getStat = (id: string) => stats[id] ?? (stats[id] = freshStat())
 
 /** 统计落盘节流：每首歌都写两次 storage 会拖慢首播，1s 内合并一次 */
@@ -106,6 +110,17 @@ export const markSourceSuccess = (id: string, ms: number) => {
   persistStats()
 }
 
+/**
+ * 播放层失败上报：音频源站不可用（HTTP 5xx / 缓冲超时）。
+ * 取链成功只说明 URL 拿到了，不代表能播，因此这个标记不能被 markSourceSuccess 清零。
+ */
+export const markSourcePlaybackFailed = (id: string) => {
+  if (!id) return
+  const s = getStat(id)
+  s.playbackFailUntil = Date.now() + PLAYBACK_FAIL_COOLDOWN
+  persistStats()
+}
+
 /** 失败上报：分级冷却；限流不罚，单曲取链失败只降排名不升级冷却 */
 export const markSourceFailed = (id: string, reason: SourceFailReason = 'init') => {
   if (!id || reason == 'limit') return
@@ -140,9 +155,11 @@ const waitApiInit = async(timeout = INIT_TIMEOUT): Promise<boolean> => {
 const rankSources = async() => {
   await loadStats()
   const list = await getUserApiList()
+  const now = Date.now()
   const scored = list.map(api => {
     const s = stats[api.id]
-    return { api, cooling: isCooling(s), score: expectedMs(s) }
+    const cooling = isCooling(s) || (s?.playbackFailUntil ?? 0) > now
+    return { api, cooling, score: expectedMs(s) }
   })
   const usable = scored.filter(x => !x.cooling)
   return (usable.length ? usable : scored).sort((a, b) => a.score - b.score)
@@ -187,18 +204,13 @@ export const switchToBestSource = switchToRandomSource
  * lastGood 失效或在冷却中时才回退到按评分选源。
  */
 export const autoSelectAvailableSource = async(): Promise<string | null> => {
-  await loadStats()
-  const list = await getUserApiList()
-  if (!list.length) return null
-  // init 流程已经 setApiSource 过一次；重复 loadScript 会让两次 init 回调错配，
-  // handleStateChange 的 id 守卫会丢结果，导致 global.lx.apis 一直为空
+  // 不再无条件直连 current / lastGood：按评分选 Top1，坏源（含播放失败冷却）自然被排除。
+  // 若 Top1 恰好是当前源则不重复 setApiSource，避免二次 loadScript 让 init 回调错配。
+  const ranked = await rankSources()
+  if (!ranked.length) return null
+  const best = ranked[0].api.id
   const current = getCurrentSourceId()
-  if (/^user_api/.test(current) && list.some(api => api.id == current) && !isCooling(stats[current])) {
-    return current
-  }
-  if (lastGood && list.some(api => api.id == lastGood) && !isCooling(stats[lastGood])) {
-    setApiSource(lastGood)
-    return lastGood
-  }
-  return switchToRandomSource(true)
+  if (best === current) return current
+  setApiSource(best)
+  return best
 }

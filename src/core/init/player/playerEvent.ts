@@ -5,7 +5,7 @@ import { isActive } from '@/utils/tools'
 import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
 import { setNowPlayTime } from '@/core/player/progress'
-import { getCurrentSourceId, isUserApiMode, markSourceFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
+import { getCurrentSourceId, isUserApiMode, markSourceFailed, markSourcePlaybackFailed, switchToRandomSource } from '@/core/musicSource/autoSelect'
 
 
 export default () => {
@@ -18,8 +18,11 @@ export default () => {
   /** 音频加载失败时标记当前音源并随机换源，让随后的 URL 刷新走新音源 */
   const switchSourceOnError = async() => {
     if (!isUserApiMode()) return
-    markSourceFailed(getCurrentSourceId(), 'load')
-    await switchToRandomSource()
+    const failedId = getCurrentSourceId()
+    // 播放层失败独立于取链成功：否则「拿到 URL」会反复清零惩罚，坏源永远排第一
+    markSourcePlaybackFailed(failedId)
+    markSourceFailed(failedId, 'load')
+    await switchToRandomSource(false, failedId)
   }
 
   const startLoadingTimeout = () => {
