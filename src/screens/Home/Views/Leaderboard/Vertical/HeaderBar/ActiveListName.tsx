@@ -56,6 +56,8 @@ const styles = createStyle({
     minHeight: 36,
     justifyContent: 'center',
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.12)',
     backgroundColor: 'rgba(128,128,128,0.08)',
     marginRight: 6,
     marginVertical: 4,
@@ -65,7 +67,7 @@ const styles = createStyle({
     alignItems: 'center',
     minHeight: 36,
     paddingLeft: 14,
-    paddingRight: 10,
+    paddingRight: 14,
   },
   text: {
     flex: 1,

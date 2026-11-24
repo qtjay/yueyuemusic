@@ -321,25 +321,22 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
 ListActionBar.displayName = 'ListActionBar'
 
 /** 通用下拉筛选：触发文字右侧带 ▾，点击弹出选项（沿用弹窗卡片样式） */
-export const FilterDropdown = memo(({ colors, label, value, options, onChange, large = false }: {
+export const FilterDropdown = memo(({ colors, label, value, options, onChange }: {
   colors: SquareColors
   label: string
   value: string
   options: Array<{ id: string, label: string }>
   onChange: (id: string) => void
-  /** 平板下放大到 UI.filterMinHeight / filterFontSize */
-  large?: boolean
 }) => {
   const [visible, setVisible] = useState(false)
   const current = options.find(o => o.id == value)?.label ?? '全部'
-  const fontSize = large ? UI.filterFontSize : UI.buttonFontSize
   return <>
     <TouchableOpacity
       onPress={() => setVisible(true)}
-      style={[styles.filterTrigger, { minHeight: large ? UI.filterMinHeight : UI.buttonMinHeight, backgroundColor: colors.surface2, borderColor: colors.line }]}
+      style={[styles.filterTrigger, { backgroundColor: colors.surface2, borderColor: colors.line }]}
     >
-      <Text numberOfLines={1} style={{ color: colors.text2, fontSize }}>{label}：{current}</Text>
-      <Text style={{ color: colors.text3, fontSize: large ? UI.filterFontSize : 12, marginLeft: 4 }}>▾</Text>
+      <Text numberOfLines={1} style={{ color: colors.text2, fontSize: UI.filterFontSize }}>{label}：{current}</Text>
+      <Text style={{ color: colors.text3, fontSize: UI.filterFontSize, marginLeft: 4 }}>▾</Text>
     </TouchableOpacity>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
       <TouchableOpacity style={styles.modalMask} activeOpacity={1} onPress={() => setVisible(false)}>
@@ -775,11 +772,12 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
   modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.md },
   modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
+  // 与实时热搜 Chip 同款药丸：14 内边距 + pill 圆角 + 1px 边框
   filterTrigger: {
     flexDirection: 'row', alignItems: 'center',
-    minHeight: UI.buttonMinHeight, paddingHorizontal: UI.buttonPaddingH * 2,
-    borderRadius: UI.buttonRadius, borderWidth: 1,
-    marginRight: UI.buttonGap, marginBottom: 4,
+    minHeight: UI.filterMinHeight, paddingHorizontal: 14,
+    borderRadius: RADIUS.pill, borderWidth: 1,
+    marginRight: SPACE.sm, marginBottom: SPACE.sm,
   },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8, alignSelf: 'flex-end' },
   sideNav: { width: 200, flex: 1, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },

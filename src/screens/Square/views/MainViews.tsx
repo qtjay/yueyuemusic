@@ -228,9 +228,9 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                     backgroundColor: colors.surface,
                     borderBottomWidth: 1, borderBottomColor: colors.line,
                   }}>
-                    <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions} large={isTablet}
+                    <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions}
                       onChange={id => { setPlatform(id); batch.selectAll([]) }} />
-                    <FilterDropdown colors={colors} label="音质" value={quality} large={isTablet}
+                    <FilterDropdown colors={colors} label="音质" value={quality}
                       options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : (QUALITY_LABEL[q] ?? q) }))}
                       onChange={id => { setQuality(id); batch.selectAll([]) }} />
                   </View>

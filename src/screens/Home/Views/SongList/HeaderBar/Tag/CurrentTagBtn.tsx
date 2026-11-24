@@ -47,12 +47,14 @@ const styles = createStyle({
   },
   btn: {
     minHeight: 36,
-    paddingLeft: 16,
-    paddingRight: 16,
+    paddingLeft: 14,
+    paddingRight: 14,
     justifyContent: 'center',
     marginHorizontal: 6,
     marginVertical: 4,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.12)',
     backgroundColor: 'rgba(128,128,128,0.08)',
   },
   sourceMenu: {
