@@ -306,7 +306,7 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   // console.log(musicInfo.source)
   const targetQuality = quality ?? getPlayQuality(settingState.setting['player.playQuality'], musicInfo)
 
-  // 兜底超时，不用来「砍慢源」：真实耗时由 markSourceSuccess 记入 EMA，慢源自然排后
+  // 兜底超时：只防止无限等待，队列顺序由播放成功/失败决定
   const URL_TIMEOUT = 12_000
   const requestUrl = async(): Promise<{ url: string, type: LX.Quality, ms: number }> => {
     const t0 = Date.now()
