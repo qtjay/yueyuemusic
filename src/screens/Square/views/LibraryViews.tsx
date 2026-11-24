@@ -960,9 +960,9 @@ const styles = StyleSheet.create({
   editCheckBox: { width: UI.checkboxSize, height: UI.checkboxSize, borderRadius: UI.checkboxRadius, marginRight: SPACE.sm },
   editBtn: { flex: 1, minHeight: UI.buttonMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: UI.buttonRadius, paddingHorizontal: UI.buttonPaddingH, marginLeft: UI.buttonGap },
   editBtnText: { fontSize: UI.buttonFontSize },
-  folderIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
-  // 歌曲行封面 40×40 配 RADIUS.sm；歌单图标按尺寸等比缩小圆角，保持同样的圆角矩形观感
-  playlistCover: { width: 22, height: 22, borderRadius: RADIUS.sm / 2 },
+  folderIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md },
+  // 与歌曲行封面完全一致：40×40 + RADIUS.sm
+  playlistCover: { width: 40, height: 40, borderRadius: RADIUS.sm },
   dragHandle: { width: UI.dragHandleSize, height: UI.dragHandleSize, alignItems: 'center', justifyContent: 'center' },
   manageName: { fontSize: 13, paddingVertical: 10 },
   modalMask: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },

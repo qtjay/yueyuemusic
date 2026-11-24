@@ -1,6 +1,6 @@
 import { playNext, setMusicUrl } from '@/core/player/player'
 import { setStatusText } from '@/core/player/playStatus'
-import { getPosition, isEmpty, setStop } from '@/plugins/player'
+import { getDuration, getPosition, isEmpty, setStop } from '@/plugins/player'
 import { isActive } from '@/utils/tools'
 import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
@@ -12,6 +12,8 @@ import { getCurrentSourceId, isUserApiMode, markSourcePlaybackFailed, markSource
 export default () => {
   let retryNum = 0
   let prevTimeoutId: string | null = null
+  /** 同一首歌在同一音源下，短时长只处理一次，避免重复换源 */
+  let handledShortKey = ''
 
   let loadingTimeout: number | null = null
   let delayNextTimeout: number | null = null
@@ -84,10 +86,24 @@ export default () => {
   const handlePlaying = () => {
     setStatusText('')
     clearLoadingTimeout()
-    // 音频真正开始播放，才允许清零播放层失败（取链成功不算），并记录实际成功的音质
-    if (isUserApiMode()) {
-      markSourcePlaybackSuccess(getCurrentSourceId(), String(settingState.setting['player.playQuality'] ?? '128k'))
-    }
+    if (!isUserApiMode()) return
+    const quality = String(settingState.setting['player.playQuality'] ?? '128k')
+    void getDuration().then(duration => {
+      // 音源给出的实际音频不足 30 秒（试听片段/错误音频）按播放失败处理
+      if (duration > 0 && duration < 30) {
+        const key = `${playerState.musicInfo?.id ?? ''}_${getCurrentSourceId()}`
+        if (key == handledShortKey) return
+        handledShortKey = key
+        void switchSourceOnError().then(() => {
+          if (playerState.playMusicInfo.musicInfo) setMusicUrl(playerState.playMusicInfo.musicInfo, true)
+        })
+        return
+      }
+      // 音频真正开始播放，才允许清零播放层失败（取链成功不算）
+      markSourcePlaybackSuccess(getCurrentSourceId(), quality)
+    }).catch(() => {
+      markSourcePlaybackSuccess(getCurrentSourceId(), quality)
+    })
   }
 
   const handleEmpied = () => {
@@ -132,6 +148,7 @@ export default () => {
   const handleSetPlayInfo = () => {
     retryNum = 0
     prevTimeoutId = null
+    handledShortKey = ''
     clearDelayNextTimeout()
     clearLoadingTimeout()
   }
