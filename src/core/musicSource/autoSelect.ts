@@ -84,10 +84,23 @@ const moveInGroup = (id: string, key: string, toFront: boolean) => {
   saveGroups()
 }
 
+/** 冷启动后打印一次各组队列，便于核对实际顺序 */
+let loggedGroups = false
+const logGroupsOnce = (list: Array<{ id: string, name: string }>) => {
+  if (loggedGroups) return
+  loggedGroups = true
+  const nameOf = new Map(list.map(api => [api.id, api.name]))
+  for (const key of ALL_GROUPS) {
+    const names = groupList(key).map(id => nameOf.get(id) ?? id)
+    console.log(`[source-groups] ${key} (${names.length}): ${names.join(' > ')}`)
+  }
+}
+
 const candidates = async(excludeId?: string): Promise<string[]> => {
   await loadGroups()
   const list = await getUserApiList()
   syncGroups(list.map(api => api.id))
+  logGroupsOnce(list)
   return groupList(groupKeyOf()).filter(id => id != excludeId)
 }
 

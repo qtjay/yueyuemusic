@@ -74,18 +74,20 @@ const mrcTools = {
     return this.getText(url)
   },
   async getMusicInfo(songInfo) {
-    return songInfo.mrcUrl == null
-      ? getMusicInfo(songInfo.songmid)
-      : songInfo
+    if (songInfo?.mrcUrl == null) {
+      // songInfo 为空时不继续解引用，交给下游统一报「获取歌词失败」
+      return songInfo?.songmid ? getMusicInfo(songInfo.songmid) : songInfo
+    }
+    return songInfo
   },
   getLyric(songInfo) {
     return {
       promise: this.getMusicInfo(songInfo).then(info => {
         let p
-        if (info.mrcUrl) p = this.getMrc(info.mrcUrl)
-        else if (info.lrcUrl) p = this.getLrc(info.lrcUrl)
+        if (info?.mrcUrl) p = this.getMrc(info.mrcUrl)
+        else if (info?.lrcUrl) p = this.getLrc(info.lrcUrl)
         if (p == null) return Promise.reject(new Error('获取歌词失败'))
-        return Promise.all([p, this.getTrc(info.trcUrl)]).then(([lrcInfo, tlyric]) => {
+        return Promise.all([p, this.getTrc(info?.trcUrl)]).then(([lrcInfo, tlyric]) => {
           lrcInfo.tlyric = tlyric
           return lrcInfo
         })
