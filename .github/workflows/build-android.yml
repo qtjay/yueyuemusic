@@ -98,13 +98,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: qtjay/yueyuemusic
         run: |
-          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          set -e
           mapfile -t files < <(find android/app/build/outputs/apk -type f -name '*.apk')
-          gh release create latest "${files[@]}" \
-            --title "APK 构建 #${GITHUB_RUN_NUMBER}" \
-            --notes "commit ${GITHUB_SHA}"
-          # 某些仓库策略会把新建 Release 落成 draft，draft 无法直连下载，这里强制发布
+          # latest 是常驻 Release，复用而不是 delete + create：
+          # GitHub API 偶发 500 会让 delete 静默失败，随后 create 直接报「tag 已存在」导致整轮失败。
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest \
+              --title "APK 构建 #${GITHUB_RUN_NUMBER}" \
+              --notes "commit ${GITHUB_SHA}" --draft=false
+          else
+            gh release create latest \
+              --title "APK 构建 #${GITHUB_RUN_NUMBER}" \
+              --notes "commit ${GITHUB_SHA}"
+          fi
+          gh release upload latest "${files[@]}" --clobber
+          # 某些仓库策略会把 Release 落成 draft，draft 无法直连下载，这里强制发布
           gh release edit latest --draft=false
+          # 尽力清理上一构建的旧 assets（失败不影响本次上传；拉包脚本按最大构建号取文件）
+          for name in $(gh release view latest --json assets --jq '.assets[].name'); do
+            case "$name" in
+              *"-b${GITHUB_RUN_NUMBER}-"*) ;;
+              *) gh release delete-asset latest "$name" --yes 2>/dev/null || true ;;
+            esac
+          done
 
       - name: 上传构建日志（失败时便于排查）
         if: failure()
