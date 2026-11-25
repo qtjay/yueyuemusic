@@ -4,7 +4,8 @@ import DorpDownMenu from '@/components/common/DorpDownMenu'
 import songlistState, { type SortInfo, type Source } from '@/store/songlist/state'
 import { useI18n } from '@/lang'
 import Text from '@/components/common/Text'
-import { createFixedStyle } from '@/utils/tools'
+import { createStyle } from '@/utils/tools'
+import { usePillTextColor } from '@/screens/Square/tokens'
 
 export interface SortTabProps {
   onSortChange: (id: string) => void
@@ -19,6 +20,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
   const [sortList, setSortList] = useState<SortInfo[]>([])
   const [activeId, setActiveId] = useState<SortInfo['id']>('')
   const t = useI18n()
+  const pillTextColor = usePillTextColor()
 
   useImperativeHandle(ref, () => ({
     setSource(source, activeTab) {
@@ -42,14 +44,14 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
       btnStyle={styles.button}
     >
       <View style={styles.inner}>
-        <Text numberOfLines={1} style={styles.label}>{activeLabel}</Text>
-        <Text style={styles.arrow}>▾</Text>
+        <Text color={pillTextColor} numberOfLines={1} style={styles.label}>{activeLabel}</Text>
+        <Text color={pillTextColor} style={styles.arrow}>▾</Text>
       </View>
     </DorpDownMenu>
   )
 })
 
-const styles = createFixedStyle({
+const styles = createStyle({
   button: {
     minHeight: 36,
     justifyContent: 'center',

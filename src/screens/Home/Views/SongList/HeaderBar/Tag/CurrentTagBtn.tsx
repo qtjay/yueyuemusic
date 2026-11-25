@@ -1,7 +1,8 @@
 import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
-import { createFixedStyle } from '@/utils/tools'
+import { createStyle } from '@/utils/tools'
+import { usePillTextColor } from '@/screens/Square/tokens'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { View } from 'react-native'
 
@@ -17,6 +18,7 @@ export interface CurrentTagBtnType {
 export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }, ref) => {
   const t = useI18n()
   const [name, setName] = useState('')
+  const pillTextColor = usePillTextColor()
 
   useImperativeHandle(ref, () => ({
     setCurrentTagInfo(name) {
@@ -28,15 +30,15 @@ export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }
   return (
     <Button style={styles.btn} onPress={onShowList}>
       <View style={styles.inner}>
-        <Text style={styles.sourceMenu}>{name}</Text>
-        <Text style={styles.arrow}>▾</Text>
+        <Text color={pillTextColor} style={styles.sourceMenu}>{name}</Text>
+        <Text color={pillTextColor} style={styles.arrow}>▾</Text>
       </View>
     </Button>
   )
 })
 
 
-const styles = createFixedStyle({
+const styles = createStyle({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',

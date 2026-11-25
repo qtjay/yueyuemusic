@@ -111,6 +111,13 @@ export const useColorMode = (): boolean => {
 export const useSquareColors = (): SquareColors => useColorMode() ? COLOR.dark : COLOR.light
 
 /**
+ * 筛选药丸文字色：深色模式统一纯白，浅色沿用各自主题色。
+ * Square 的 FilterDropdown/Chip 与内嵌旧 Home 组件的药丸共用，保证深色下都清晰。
+ * 传 undefined 时浅色回退到旧组件 Text 的默认主题色。
+ */
+export const usePillTextColor = (lightColor?: string): string | undefined => useColorMode() ? '#fff' : lightColor
+
+/**
  * 600dp 分界：平板（含折叠展开）常驻侧栏，手机用抽屉。
  * useWindowDimensions 会随旋转/分屏实时更新，对应 musicsquare「窗口缩放也正确响应」的经验。
  */

@@ -10,13 +10,13 @@ import { getListMusicSync } from '@/utils/listManage'
 import { getCachedMusicIds, subscribeCacheUpdate } from '@/core/musicCache'
 import { addListMusics, createList } from '@/core/list'
 import { enqueueCacheMusic } from '@/core/musicCache/queue'
-import { toast } from '@/utils/tools'
+import { createStyle, toast } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 import listState from '@/store/list/state'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
 import { scaleSizeW } from '@/utils/pixelRatio'
-import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, UI, type SquareColors } from './tokens'
+import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, UI, usePillTextColor, type SquareColors } from './tokens'
 
 /** 已缓存歌曲 id 集合：缓存写入/删除后自动刷新，供列表蓝色勾使用 */
 export const useCachedIds = () => {
@@ -93,17 +93,20 @@ export const Chip = memo(({ colors, label, active, onPress }: {
   label: string
   active?: boolean
   onPress: () => void
-}) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.chip, {
-      backgroundColor: active ? colors.accent : colors.surface2,
-      borderColor: active ? colors.accent : colors.line,
-    }]}
-  >
-    <Text style={[styles.chipText, { color: active ? '#fff' : colors.text2 }]}>{label}</Text>
-  </TouchableOpacity>
-))
+}) => {
+  const pillTextColor = usePillTextColor(colors.text2)
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[pillStyles.chip, {
+        backgroundColor: active ? colors.accent : colors.surface2,
+        borderColor: active ? colors.accent : colors.line,
+      }]}
+    >
+      <Text style={[pillStyles.chipText, { color: active ? '#fff' : pillTextColor }]}>{label}</Text>
+    </TouchableOpacity>
+  )
+})
 Chip.displayName = 'Chip'
 
 export const SearchBox = memo(({ colors, value, onChangeText, onSubmit, placeholder }: {
@@ -330,13 +333,16 @@ export const FilterDropdown = memo(({ colors, label, value, options, onChange }:
 }) => {
   const [visible, setVisible] = useState(false)
   const current = options.find(o => o.id == value)?.label ?? '全部'
+  // 深色模式下药丸文字统一纯白；浅色沿用 text2 / text3
+  const labelColor = usePillTextColor(colors.text2)
+  const arrowColor = usePillTextColor(colors.text3)
   return <>
     <TouchableOpacity
       onPress={() => setVisible(true)}
-      style={[styles.filterTrigger, { backgroundColor: colors.surface2, borderColor: colors.line }]}
+      style={[pillStyles.filterTrigger, { backgroundColor: colors.surface2, borderColor: colors.line }]}
     >
-      <Text numberOfLines={1} style={{ color: colors.text2, fontSize: UI.filterFontSize }}>{label}：{current}</Text>
-      <Text style={{ color: colors.text3, fontSize: UI.filterFontSize, marginLeft: 4 }}>▾</Text>
+      <Text numberOfLines={1} style={[pillStyles.filterText, { color: labelColor }]}>{label}：{current}</Text>
+      <Text style={[pillStyles.filterArrow, { color: arrowColor }]}>▾</Text>
     </TouchableOpacity>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
       <TouchableOpacity style={styles.modalMask} activeOpacity={1} onPress={() => setVisible(false)}>
@@ -716,6 +722,39 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
 })
 MiniPlayer.displayName = 'MiniPlayer'
 
+/**
+ * 筛选药丸专用尺寸：与内嵌的旧 Home 组件（热门歌单 / 排行榜）一样走 createStyle，
+ * 按屏幕统一缩放，保证 Square 的搜索结果 / 实时热搜药丸与旧组件药丸等高、同字号。
+ * 基准值 36 高 / 13 字 / 14 内边距 / 1px 边框 / pill 圆角，与 UI.filter* 常量一致。
+ */
+const pillStyles = createStyle({
+  chip: {
+    height: UI.filterMinHeight,
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 0,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    marginRight: SPACE.sm,
+    marginBottom: SPACE.sm,
+  },
+  chipText: { fontSize: UI.filterFontSize },
+  filterTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: UI.filterMinHeight,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    marginRight: SPACE.sm,
+    marginBottom: SPACE.sm,
+  },
+  filterText: { fontSize: UI.filterFontSize },
+  filterArrow: { fontSize: UI.filterFontSize, marginLeft: 4 },
+})
+
 const styles = StyleSheet.create({
   card: { borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACE.lg, marginBottom: SPACE.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACE.md },
@@ -724,8 +763,6 @@ const styles = StyleSheet.create({
   sectionHint: { fontSize: 12 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56 },
   emptyText: { fontSize: 13, marginTop: SPACE.md },
-  chip: { height: UI.filterMinHeight, alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 0, borderRadius: RADIUS.pill, borderWidth: 1, marginRight: SPACE.sm, marginBottom: SPACE.sm },
-  chipText: { fontSize: UI.filterFontSize },
   searchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1, paddingLeft: SPACE.md, paddingRight: 4, flex: 1, minWidth: 0, minHeight: 40 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingHorizontal: SPACE.sm, minHeight: 36 },
   searchBtn: { minWidth: 56, minHeight: 30, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, alignItems: 'center', justifyContent: 'center' },
@@ -772,13 +809,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: SPACE.lg },
   modalInput: { borderWidth: 1, borderRadius: RADIUS.sm, paddingHorizontal: SPACE.md, paddingVertical: 8, fontSize: 14, marginBottom: SPACE.md },
   modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
-  // 与实时热搜 Chip 同款药丸：14 内边距 + pill 圆角 + 1px 边框
-  filterTrigger: {
-    flexDirection: 'row', alignItems: 'center',
-    minHeight: UI.filterMinHeight, paddingHorizontal: 14,
-    borderRadius: RADIUS.pill, borderWidth: 1,
-    marginRight: SPACE.sm, marginBottom: SPACE.sm,
-  },
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8, alignSelf: 'flex-end' },
   sideNav: { width: 200, flex: 1, borderRightWidth: 1, paddingTop: SPACE.xl, paddingHorizontal: SPACE.md },
   navItems: { flexShrink: 0 },

@@ -4,7 +4,8 @@ import Button from '@/components/common/Button'
 // import { navigations } from '@/navigation'
 import Modal, { type ModalType } from './Modal'
 import { type Source } from '@/store/songlist/state'
-import { createFixedStyle } from '@/utils/tools'
+import { createStyle } from '@/utils/tools'
+import { usePillTextColor } from '@/screens/Square/tokens'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { navigations } from '@/navigation'
@@ -22,6 +23,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   const t = useI18n()
   const modalRef = useRef<ModalType>(null)
   const songlistInfoRef = useRef<{ source: Source }>({ source: 'kw' })
+  const pillTextColor = usePillTextColor()
 
   useImperativeHandle(ref, () => ({
     setInfo(source) {
@@ -50,14 +52,14 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   return (
     <>
       <Button style={styles.button} onPress={() => modalRef.current?.show(songlistInfoRef.current.source)}>
-        <Text style={styles.text}>{t('songlist_open')}</Text>
+        <Text color={pillTextColor} style={styles.text}>{t('songlist_open')}</Text>
       </Button>
       <Modal ref={modalRef} onOpenId={handleOpenSonglist} />
     </>
   )
 })
 
-const styles = createFixedStyle({
+const styles = createStyle({
   button: {
     minHeight: 36,
     alignItems: 'center',

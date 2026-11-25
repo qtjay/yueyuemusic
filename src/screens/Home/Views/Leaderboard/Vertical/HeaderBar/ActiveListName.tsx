@@ -2,7 +2,8 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { View } from 'react-native'
 
 import DorpDownMenu from '@/components/common/DorpDownMenu'
-import { createFixedStyle } from '@/utils/tools'
+import { createStyle } from '@/utils/tools'
+import { usePillTextColor } from '@/screens/Square/tokens'
 import Text from '@/components/common/Text'
 import type { BoardItem } from '@/store/leaderboard/state'
 
@@ -18,6 +19,7 @@ export interface ActiveListNameType {
 export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, onBoundChange }, ref) => {
   const [currentListName, setCurrentListName] = useState('')
   const [activeId, setActiveId] = useState('')
+  const pillTextColor = usePillTextColor()
 
   useImperativeHandle(ref, () => ({
     setBound(id, name) {
@@ -40,15 +42,15 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
         forceDown
       >
         <View style={styles.inner}>
-          <Text numberOfLines={1} style={styles.text}>{currentListName}</Text>
-          <Text style={styles.arrow}>▾</Text>
+          <Text color={pillTextColor} numberOfLines={1} style={styles.text}>{currentListName}</Text>
+          <Text color={pillTextColor} style={styles.arrow}>▾</Text>
         </View>
       </DorpDownMenu>
     </View>
   )
 })
 
-const styles = createFixedStyle({
+const styles = createStyle({
   container: {
     // 父容器是 flexDirection:'row' + alignItems:'center'。
     // 这里不能用 alignSelf:'flex-start'（在 row 中控制的是垂直方向，会让药丸整体靠上、与左侧平台选择器不齐）。

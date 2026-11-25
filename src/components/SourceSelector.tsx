@@ -6,7 +6,8 @@ import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 
 import { useSettingValue } from '@/store/setting/hook'
-import { createFixedStyle } from '@/utils/tools'
+import { createStyle } from '@/utils/tools'
+import { usePillTextColor } from '@/screens/Square/tokens'
 
 type Sources = Readonly<Array<LX.OnlineSource | 'all'>>
 
@@ -35,6 +36,8 @@ const Component = <S extends Sources>({ fontSize = 13, center, forceDown, onSour
   const [list, setList] = useState([] as unknown as S)
   const [source, setSource] = useState<S[number]>('kw')
   const t = useI18n()
+  // Square 深色模式下的药丸文字统一纯白；浅色沿用旧组件默认主题色
+  const pillTextColor = usePillTextColor()
 
   useImperativeHandle(ref, () => ({
     setSourceList(list, activeSource) {
@@ -63,9 +66,8 @@ const Component = <S extends Sources>({ fontSize = 13, center, forceDown, onSour
     >
       <View style={styles.sourceMenu}>
         <View style={styles.sourceInner}>
-          {/* 用 style 直接给固定字号，不走 Text 的 size 属性（setSpText 会按屏幕放大） */}
-          <Text style={{ fontSize, textAlign: center ? 'center' : 'left' }} numberOfLines={1}>{t(`source_${sourceNameType}_${source}`)}</Text>
-          <Text style={styles.arrow}>▾</Text>
+          <Text color={pillTextColor} style={{ textAlign: center ? 'center' : 'left' }} numberOfLines={1} size={fontSize}>{t(`source_${sourceNameType}_${source}`)}</Text>
+          <Text color={pillTextColor} style={styles.arrow}>▾</Text>
         </View>
       </View>
     </DorpDownMenu>
@@ -75,7 +77,7 @@ const Component = <S extends Sources>({ fontSize = 13, center, forceDown, onSour
 export default forwardRef(Component) as <S extends Sources>(p: SourceSelectorProps<S> & { ref?: Ref<SourceSelectorType<S>> }) => JSX.Element | null
 
 
-const styles = createFixedStyle({
+const styles = createStyle({
   sourceInner: {
     flexDirection: 'row',
     alignItems: 'center',

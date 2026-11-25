@@ -28,7 +28,7 @@ import { RADIUS, SPACE, useLayoutMode, type SquareColors } from '../tokens'
 /** 一级：保留原有专辑网格、最新/最热等分类筛选 */
 export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
   <View style={{ flex: 1, paddingTop: SPACE.lg, paddingHorizontal: SPACE.lg, paddingBottom: 0 }}>
-    <SectionShell colors={colors} style={{ flex: 1, padding: 0, borderRadius: RADIUS.lg, marginBottom: 0 }}>
+    <SectionShell colors={colors} style={{ flex: 1, paddingTop: SPACE.md, paddingHorizontal: 0, paddingBottom: 0, borderRadius: RADIUS.lg, marginBottom: 0 }}>
       <SongListPage />
     </SectionShell>
   </View>
