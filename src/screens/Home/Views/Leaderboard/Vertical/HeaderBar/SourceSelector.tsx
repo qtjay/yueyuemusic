@@ -41,7 +41,10 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
 
 const styles = createStyle({
   selector: {
-    minHeight: PILL_BASE_HEIGHT,
+    // 公共 SourceSelector 内部是 height:'100%'，minHeight 压不住它，必须用固定 height
+    // 才能与 ActiveListName / SortTab 等药丸等高。
+    height: PILL_BASE_HEIGHT,
+    overflow: 'hidden',
     justifyContent: 'center',
     borderRadius: 999,
     borderWidth: 1,
