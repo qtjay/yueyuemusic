@@ -4,7 +4,7 @@ import DorpDownMenu from '@/components/common/DorpDownMenu'
 import songlistState, { type SortInfo, type Source } from '@/store/songlist/state'
 import { useI18n } from '@/lang'
 import Text from '@/components/common/Text'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 
 export interface SortTabProps {
   onSortChange: (id: string) => void
@@ -49,7 +49,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   button: {
     minHeight: 36,
     justifyContent: 'center',
@@ -58,7 +58,6 @@ const styles = createStyle({
     borderColor: 'rgba(128,128,128,0.12)',
     backgroundColor: 'rgba(128,128,128,0.08)',
     marginRight: 6,
-    marginVertical: 4,
   },
   inner: {
     flexDirection: 'row',

@@ -4,7 +4,7 @@ import { View } from 'react-native'
 // import { useGetter, useDispatch } from '@/store'
 // import Tag from './Tag'
 // import OpenList from './OpenList'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 // import { BorderWidths } from '@/theme'
 import SourceSelector, {
   type SourceSelectorType,
@@ -43,7 +43,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ boards, onBoundChang
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   currentList: {
     flexDirection: 'row',
     alignItems: 'center',

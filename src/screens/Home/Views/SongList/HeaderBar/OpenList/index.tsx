@@ -4,7 +4,7 @@ import Button from '@/components/common/Button'
 // import { navigations } from '@/navigation'
 import Modal, { type ModalType } from './Modal'
 import { type Source } from '@/store/songlist/state'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { navigations } from '@/navigation'
@@ -57,7 +57,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   button: {
     minHeight: 36,
     alignItems: 'center',
@@ -65,7 +65,6 @@ const styles = createStyle({
     paddingLeft: 14,
     paddingRight: 14,
     marginRight: 6,
-    marginVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(128,128,128,0.12)',

@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { StyleSheet, View, type ViewStyle } from 'react-native'
 
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 import SourceSelector, {
   type SourceSelectorType as _SourceSelectorType,
   type SourceSelectorProps as _SourceSelectorProps,
@@ -38,7 +38,7 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   selector: {
     minHeight: 36,
     justifyContent: 'center',
@@ -47,6 +47,5 @@ const styles = createStyle({
     borderColor: 'rgba(128,128,128,0.12)',
     backgroundColor: 'rgba(128,128,128,0.08)',
     marginRight: 6,
-    marginVertical: 4,
   },
 })

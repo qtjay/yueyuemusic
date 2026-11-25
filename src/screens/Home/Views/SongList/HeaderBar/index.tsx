@@ -5,7 +5,7 @@ import { View } from 'react-native'
 import SortTab, { type SortTabProps, type SortTabType } from './SortTab'
 // import Tag from './Tag'
 // import OpenList from './OpenList'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 // import { BorderWidths } from '@/theme'
 import SourceSelector, {
   type SourceSelectorType,
@@ -55,7 +55,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

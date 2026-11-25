@@ -522,6 +522,16 @@ export const createStyle = <T extends StyleSheet.NamedStyles<T>>(styles: T | Sty
   return StyleSheet.create(newStyle as StyleSheet.NamedStyles<T>)
 }
 
+/**
+ * 固定 dp 样式（不做屏幕缩放）。
+ * 旧 Home 组件用 createStyle 会把 minHeight / fontSize / padding 按屏幕放大，
+ * 而 Square 用 StyleSheet.create 是固定 dp。内嵌到 Square 的筛选药丸必须用这个，
+ * 否则同样的 36/13/14 在平板上会比搜索结果药丸大一圈。
+ */
+export const createFixedStyle = <T extends StyleSheet.NamedStyles<T>>(styles: T | StyleSheet.NamedStyles<T>): T => {
+  return StyleSheet.create(styles as StyleSheet.NamedStyles<T>) as unknown as T
+}
+
 export const isHorizontalMode = (width: number, height: number): boolean => {
   return width / height > 1.2
 }

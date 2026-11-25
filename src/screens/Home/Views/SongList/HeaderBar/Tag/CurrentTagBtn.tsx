@@ -1,7 +1,7 @@
 import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { View } from 'react-native'
 
@@ -36,7 +36,7 @@ export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }
 })
 
 
-const styles = createStyle({
+const styles = createFixedStyle({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -51,7 +51,6 @@ const styles = createStyle({
     paddingRight: 14,
     justifyContent: 'center',
     marginHorizontal: 6,
-    marginVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(128,128,128,0.12)',

@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { View } from 'react-native'
 
 import DorpDownMenu from '@/components/common/DorpDownMenu'
-import { createStyle } from '@/utils/tools'
+import { createFixedStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
 import type { BoardItem } from '@/store/leaderboard/state'
 
@@ -48,7 +48,7 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
   )
 })
 
-const styles = createStyle({
+const styles = createFixedStyle({
   container: {
     // 父容器是 flexDirection:'row' + alignItems:'center'。
     // 这里不能用 alignSelf:'flex-start'（在 row 中控制的是垂直方向，会让药丸整体靠上、与左侧平台选择器不齐）。
@@ -66,7 +66,6 @@ const styles = createStyle({
     borderColor: 'rgba(128,128,128,0.12)',
     backgroundColor: 'rgba(128,128,128,0.08)',
     marginRight: 6,
-    marginVertical: 4,
   },
   inner: {
     flexDirection: 'row',
