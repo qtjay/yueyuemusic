@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Animated, Easing, Image, Modal, PanResponder, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { playList } from '@/core/player/player'
 import {
@@ -849,12 +849,14 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
 })
 PlayingQueueView.displayName = 'PlayingQueueView'
 
-/** 正在播放：下半圆旋转专辑（直边贴顶）+ 逐行歌词；顶部无工具栏、无进度/控制 */
+/** 正在播放：手机为下半圆旋转专辑 + 逐行歌词；平板为整圆唱片与歌词左右排列 */
 export const NowPlayingView = memo(({ colors, onBack }: {
   colors: SquareColors
   onBack: () => void
 }) => {
   usePlayerTick()
+  const { isTablet } = useLayoutMode()
+  const { width, height } = useWindowDimensions()
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
   const rotate = useRef(new Animated.Value(0)).current
 
@@ -893,32 +895,64 @@ export const NowPlayingView = memo(({ colors, onBack }: {
   const picUrl = playerState.musicInfo.pic
     ?? ((music?.meta as Record<string, any> | undefined)?.picUrl as string | undefined)
 
+  // 平板唱片按窗口自适应（200~300dp），避免占满整列或过小；手机沿用固定 380 半圆
+  const discSize = Math.max(200, Math.min(300, Math.round(Math.min(height * 0.42, width * 0.26))))
+
+  const disc = (
+    <Animated.View style={[
+      styles.npDisc,
+      { backgroundColor: colors.accentSoft, borderColor: colors.surface, transform: [{ rotate: spin }] },
+      isTablet ? { width: discSize, height: discSize, borderRadius: discSize / 2, marginTop: 0 } : null,
+    ]}>
+      {picUrl
+        ? <Image source={{ uri: picUrl }} style={styles.npCover} resizeMode="cover" />
+        : <View style={[styles.npCover, { alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ color: colors.accent, fontSize: 64 }}>♪</Text>
+          </View>}
+    </Animated.View>
+  )
+  const heading = <>
+    <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? sq('no_playing')}</Text>
+    <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
+  </>
+  const lyrics = (
+    <ScrollView ref={lyricScroll} style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
+      {lines.length
+        ? lines.map((line, i) => (
+            <Text key={`${line.time}_${i}`} style={[styles.npLyricText, {
+              color: i == activeLine ? colors.accent : colors.text2,
+              fontWeight: i == activeLine ? '600' : '400',
+            }]}>{line.text}</Text>
+          ))
+        : <Text style={[styles.npLyricText, { color: colors.text2 }]}>{sq('no_lyrics')}</Text>}
+    </ScrollView>
+  )
+  const collapse = (
+    <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface }]}>
+      <Text style={[styles.npCollapseText, { color: colors.text }]}>{sq('collapse')}</Text>
+    </TouchableOpacity>
+  )
+
+  // 平板：整圆唱片在左、歌名+歌词在右，两侧各占一列、垂直撑满
+  if (isTablet) {
+    return (
+      <View style={[styles.npContainer, { backgroundColor: colors.bg, flexDirection: 'row', alignItems: 'stretch' }]}>
+        <View style={styles.npTabletDiscCol}>{disc}</View>
+        <View style={styles.npTabletLyricCol}>
+          {heading}
+          {lyrics}
+        </View>
+        {collapse}
+      </View>
+    )
+  }
+
   return (
     <View style={[styles.npContainer, { backgroundColor: colors.bg }]}>
-      <View style={styles.npHalf}>
-        <Animated.View style={[styles.npDisc, { backgroundColor: colors.accentSoft, borderColor: colors.surface, transform: [{ rotate: spin }] }]}>
-          {picUrl
-            ? <Image source={{ uri: picUrl }} style={styles.npCover} resizeMode="cover" />
-            : <View style={[styles.npCover, { alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ color: colors.accent, fontSize: 64 }}>♪</Text>
-              </View>}
-        </Animated.View>
-      </View>
-      <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.npCollapseText, { color: colors.text }]}>{sq('collapse')}</Text>
-      </TouchableOpacity>
-      <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? sq('no_playing')}</Text>
-      <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
-      <ScrollView ref={lyricScroll} style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
-        {lines.length
-          ? lines.map((line, i) => (
-              <Text key={`${line.time}_${i}`} style={[styles.npLyricText, {
-                color: i == activeLine ? colors.accent : colors.text2,
-                fontWeight: i == activeLine ? '600' : '400',
-              }]}>{line.text}</Text>
-            ))
-          : <Text style={[styles.npLyricText, { color: colors.text2 }]}>{sq('no_lyrics')}</Text>}
-      </ScrollView>
+      <View style={styles.npHalf}>{disc}</View>
+      {collapse}
+      {heading}
+      {lyrics}
     </View>
   )
 })
@@ -976,6 +1010,9 @@ const styles = StyleSheet.create({
   modalBtn: { paddingHorizontal: SPACE.lg, paddingVertical: 8 },
   modalItem: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
   npContainer: { flex: 1, alignItems: 'center' },
+  // 平板左右布局：左列整圆唱片、右列歌名+歌词
+  npTabletDiscCol: { width: '42%', alignItems: 'center', justifyContent: 'center', paddingLeft: SPACE.xl },
+  npTabletLyricCol: { flex: 1, alignItems: 'center', paddingRight: SPACE.xl, paddingTop: SPACE.lg },
   npHalf: { width: '100%', height: 190, alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden' },
   npDisc: { width: 380, height: 380, borderRadius: 190, marginTop: -190, borderWidth: 2, overflow: 'hidden' },
   npCover: { width: '100%', height: '100%' },

@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { View, TouchableOpacity, Image } from 'react-native'
+import { View, TouchableOpacity, Image, StyleSheet } from 'react-native'
 // import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
@@ -51,11 +51,11 @@ export default memo(({ item, index, onPress, onLongPress, selectedList, cachedId
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` - ${item.meta.albumName}` : ''}`
 
   return (
-    <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)' }}>
+    <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, paddingHorizontal: 8, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)' }}>
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
-        <View style={styles.cover}>
+        <View style={coverStyles.cover}>
           {cover
-            ? <Image source={{ uri: cover }} style={styles.coverImg} resizeMode="cover" />
+            ? <Image source={{ uri: cover }} style={coverStyles.coverImg} resizeMode="cover" />
             : <Text size={16} color={theme['c-350']}>♪</Text>}
         </View>
         <View style={styles.itemInfo}>
@@ -92,6 +92,24 @@ export default memo(({ item, index, onPress, onLongPress, selectedList, cachedId
   )
 })
 
+/**
+ * 封面必须用固定 dp：行高 ITEM_HEIGHT=60 是固定值，而 createStyle 会按屏幕缩放尺寸。
+ * 平板上封面被放大到接近/超过行高，相邻两行封面就会上下贴在一起「挤到一块」。
+ * 这里与 Square 的 TrackRow 完全对齐：40×40、圆角 10、封面→文字间距 12。
+ */
+const coverStyles = StyleSheet.create({
+  cover: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(128,128,128,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  coverImg: { width: 40, height: 40, borderRadius: 10 },
+})
+
 const styles = createStyle({
   listItem: {
     // width: '100%',
@@ -109,20 +127,6 @@ const styles = createStyle({
     flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  cover: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(128,128,128,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  coverImg: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
   },
   cacheDot: {
     width: 14,
