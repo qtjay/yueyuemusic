@@ -50,7 +50,6 @@ const styles = createStyle({
     height: 40,
     zIndex: 2,
     borderRadius: 12,
-    backgroundColor: 'rgba(128,128,128,0.06)',
     paddingHorizontal: 6,
     marginHorizontal: 8,
     marginBottom: 8,

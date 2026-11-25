@@ -32,7 +32,8 @@ module.exports = async newVerNum => {
   version.version = newVerNum
   version.desc = newMDChangeLog.replace(/(?:^|(\n))#{1,6} (.+)\n/g, '$1$2').trim()
   pkg.version = newVerNum
-  pkg.versionCode = pkg.versionCode + 1
+  // 内部版本号已改由 CI 构建号提供（src/config/buildInfo.json），
+  // package.json.versionCode 仅作为本地非 CI 构建的 versionCode 回退值，不再随发布自增。
 
   console.log(chalk.blue('new version: ') + chalk.green(newVerNum))
 

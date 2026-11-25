@@ -98,7 +98,13 @@ def getNpmPackageJson() {
     return packageJson
 }
 def npmPackageJson = getNpmPackageJson()
-def verCode = npmPackageJson["versionCode"]
+// 内部版本号改用 CI 构建号（tools/set-build-number.js 在构建前写入 src/config/buildInfo.json）。
+// Android versionCode 只能递增，历史包已发到 1008，直接写 133 会被判降级而装不上，
+// 因此用 10000 + 构建号：既随构建号单调递增，又始终高于历史值；本地包回退 package.json。
+def buildInfoFile = new File(rootProject.projectDir.parentFile, "src/config/buildInfo.json")
+def buildInfo = buildInfoFile.exists() ? new JsonSlurper().parseText(buildInfoFile.text) : [:]
+def buildNumber = (buildInfo["buildNumber"] ?: 0) as Integer
+def verCode = buildNumber > 0 ? 10000 + buildNumber : npmPackageJson["versionCode"]
 def verName = npmPackageJson["version"]
 def applicationName = npmPackageJson["name"]
 // 每次 CI 构建把 run number 打进 APK 文件名，便于区分不同构建；本地构建用 local

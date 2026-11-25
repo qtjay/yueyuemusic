@@ -41,6 +41,11 @@ jobs:
         run: node dependencies-patch.js
         continue-on-error: true
 
+      # 内部版本号 = 本次构建号。必须在打包 JS bundle 之前写入，
+      # 这样 RN 的 require('./buildInfo.json') 与 gradle 读到的构建号一致。
+      - name: 写入构建号（内部版本号）
+        run: node tools/set-build-number.js
+
       - name: 配置 JDK 17
         uses: actions/setup-java@v5
         with:

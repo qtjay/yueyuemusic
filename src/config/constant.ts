@@ -1,7 +1,11 @@
-// 版本信息直接取自 package.json，与 build.gradle 的 versionName / versionCode 保持一致
+// 版本名取 package.json；内部版本号改由 CI 构建号提供（tools/set-build-number.js 生成）
 const pkg = require('../../package.json') as { version?: string, versionCode?: number }
+const buildInfo = require('./buildInfo.json') as { buildNumber?: number }
 export const APP_VERSION = pkg.version ?? '1.0.0'
-export const APP_VERSION_CODE = pkg.versionCode ?? 0
+/** 内部版本号 = GitHub Actions 构建号（与 APK 文件名 b<num> 一致） */
+export const APP_BUILD_NUMBER = buildInfo.buildNumber ?? 0
+/** 非 CI 的本地包没有构建号，回退到 package.json.versionCode，避免显示 0 */
+export const APP_VERSION_CODE = APP_BUILD_NUMBER || pkg.versionCode || 0
 
 export const HEADER_HEIGHT = 42
 export const LIST_ITEM_HEIGHT = 54

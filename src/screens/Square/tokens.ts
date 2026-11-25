@@ -57,7 +57,7 @@ export const UI = {
   iconButtonSize: 32,
   dragHandleSize: 44,
   headerFontSize: 14,
-  /** 平板下所有筛选菜单统一尺寸（2026-11-25 用户指定） */
+  /** 全站药丸/筛选菜单统一尺寸（2026-11-25 用户指定，含实时热搜与搜索记录 Chip） */
   filterMinHeight: 36,
   filterFontSize: 13,
 } as const

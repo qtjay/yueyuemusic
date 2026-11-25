@@ -21,7 +21,7 @@
     "clear:full": "git clean -fdx -e android/keystore.properties -e android/app/*.keystore",
     "build:theme": "node src/theme/themes/createThemes.js",
     "gen:sources": "node tools/gen-music-sources.js",
-    "bump:version": "node tools/bump-version.js",
+    "set:build": "node tools/set-build-number.js",
     "publish": "node publish"
   },
   "engines": {

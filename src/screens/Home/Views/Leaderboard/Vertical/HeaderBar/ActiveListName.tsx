@@ -50,8 +50,9 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ boards, on
 
 const styles = createStyle({
   container: {
-    // 与热门歌单的筛选药丸一致：按内容自适应，不占满 HeaderBar 剩余宽度
-    alignSelf: 'flex-start',
+    // 父容器是 flexDirection:'row' + alignItems:'center'。
+    // 这里不能用 alignSelf:'flex-start'（在 row 中控制的是垂直方向，会让药丸整体靠上、与左侧平台选择器不齐）。
+    // 只保留宽度约束，让父级居中生效。
     flexShrink: 1,
     minWidth: 0,
     maxWidth: 220,
@@ -76,9 +77,9 @@ const styles = createStyle({
   },
   text: {
     // 不拉伸：文字按榜单名长度自适应，过长时由 numberOfLines 截断
+    // 不额外加 paddingRight，▾ 与其他筛选药丸一样只靠 arrow.marginLeft:4
     flexShrink: 1,
     fontSize: 13,
-    paddingRight: 6,
   },
   arrow: {
     fontSize: 14,
