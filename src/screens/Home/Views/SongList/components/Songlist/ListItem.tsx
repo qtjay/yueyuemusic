@@ -6,6 +6,7 @@ import Text from '@/components/common/Text'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
 import { useTheme } from '@/store/theme/hook'
+import { usePillTextColor } from '@/screens/Square/tokens'
 import Image from '@/components/common/Image'
 
 const gap = scaleSizeW(15)
@@ -17,6 +18,8 @@ export default memo(({ item, index, width, showSource, onPress }: {
   onPress: (item: ListInfoItem, index: number) => void
 }) => {
   const theme = useTheme()
+  // 深色模式下歌单标题统一纯白；浅色沿用旧组件默认主题色
+  const titleColor = usePillTextColor()
   const itemWidth = width - gap
   const handlePress = () => {
     onPress(item, index)
@@ -32,7 +35,7 @@ export default memo(({ item, index, width, showSource, onPress }: {
               </TouchableOpacity>
             </View>
             <TouchableOpacity activeOpacity={0.5} onPress={handlePress}>
-              <Text style={styles.listItemTitle} numberOfLines={ 2 }>{item.name}</Text>
+              <Text color={titleColor} style={styles.listItemTitle} numberOfLines={ 2 }>{item.name}</Text>
             </TouchableOpacity>
             {/* <Text>{JSON.stringify(item)}</Text> */}
           </View>

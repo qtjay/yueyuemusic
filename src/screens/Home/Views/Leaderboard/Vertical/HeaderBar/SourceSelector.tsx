@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { StyleSheet, View, type ViewStyle } from 'react-native'
 
 import { createStyle } from '@/utils/tools'
+import { PILL_BASE_HEIGHT } from '@/utils/pillSize'
 import SourceSelector, {
   type SourceSelectorType as _SourceSelectorType,
   type SourceSelectorProps as _SourceSelectorProps,
@@ -40,7 +41,7 @@ export default forwardRef<SourceSelectorType, SourceSelectorProps>(({ style, onS
 
 const styles = createStyle({
   selector: {
-    minHeight: 36,
+    minHeight: PILL_BASE_HEIGHT,
     justifyContent: 'center',
     borderRadius: 999,
     borderWidth: 1,

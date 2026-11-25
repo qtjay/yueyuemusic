@@ -4,6 +4,7 @@ import { View, TouchableOpacity, Image } from 'react-native'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
+import { usePillTextColor } from '@/screens/Square/tokens'
 import { createStyle, type RowInfo } from '@/utils/tools'
 import { getCachedMusicCover, loadMusicCover } from '@/utils/musicCover'
 
@@ -32,6 +33,8 @@ export default memo(({ item, index, onPress, onLongPress, selectedList, cachedId
   isShowInterval: boolean
 }) => {
   const theme = useTheme()
+  // 深色模式下歌曲标题统一纯白；浅色沿用旧组件默认主题色
+  const titleColor = usePillTextColor()
 
   const isSelected = selectedList.includes(item)
 
@@ -56,7 +59,7 @@ export default memo(({ item, index, onPress, onLongPress, selectedList, cachedId
             : <Text size={16} color={theme['c-350']}>♪</Text>}
         </View>
         <View style={styles.itemInfo}>
-          <Text numberOfLines={1} style={{ fontSize: 13 }}>{item.name}</Text>
+          <Text color={titleColor} numberOfLines={1} style={{ fontSize: 13 }}>{item.name}</Text>
           <View style={styles.listItemSingle}>
             { cached
               ? <View style={styles.cacheDot}><Text style={styles.cacheDotText}>✓</Text></View>

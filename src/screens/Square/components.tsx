@@ -17,6 +17,7 @@ import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import { PLAYER_H, RADIUS, SPACE, TRACK_ROW_H, UI, usePillTextColor, type SquareColors } from './tokens'
+import { sq } from './lang'
 
 /** 已缓存歌曲 id 集合：缓存写入/删除后自动刷新，供列表蓝色勾使用 */
 export const useCachedIds = () => {
@@ -71,7 +72,7 @@ export const HeaderBackText = memo(({ colors, onPress }: {
   onPress: () => void
 }) => (
   <TouchableOpacity onPress={onPress} hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }} style={{ paddingHorizontal: 4, paddingVertical: 4 }}>
-    <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>返回</Text>
+    <Text style={{ color: colors.accent, fontSize: UI.headerFontSize }}>{sq('back')}</Text>
   </TouchableOpacity>
 ))
 HeaderBackText.displayName = 'HeaderBackText'
@@ -131,7 +132,7 @@ export const SearchBox = memo(({ colors, value, onChangeText, onSubmit, placehol
       autoCorrect={false}
     />
     <TouchableOpacity onPress={onSubmit} style={[styles.searchBtn, { backgroundColor: colors.accent }]}>
-      <Text style={styles.searchBtnText}>搜索</Text>
+      <Text style={styles.searchBtnText}>{sq('search')}</Text>
     </TouchableOpacity>
   </View>
 ))
@@ -236,8 +237,8 @@ export const getSongsDurationText = (songs: LX.Music.MusicInfo[]) => {
     return acc + (Number.isFinite(mm) && Number.isFinite(ss) ? mm * 60 + ss : 0)
   }, 0)
   return totalSec >= 3600
-    ? `${Math.floor(totalSec / 3600)} 小时 ${Math.floor((totalSec % 3600) / 60)} 分钟`
-    : `${Math.floor(totalSec / 60)} 分钟`
+    ? sq('duration_hours', { h: Math.floor(totalSec / 3600), m: Math.floor((totalSec % 3600) / 60) })
+    : sq('duration_minutes', { m: Math.floor(totalSec / 60) })
 }
 
 /** 全站统一的「进入批量编辑」图标按钮（搜索结果为基线样式） */
@@ -245,7 +246,7 @@ export const BatchEditButton = memo(({ colors, onPress }: {
   colors: SquareColors
   onPress: () => void
 }) => (
-  <TouchableOpacity onPress={onPress} style={styles.iconBtn} accessibilityLabel="批量编辑">
+  <TouchableOpacity onPress={onPress} style={styles.iconBtn} accessibilityLabel={sq('batch_edit')}>
     <Icon name="menu" color={colors.text2} size={20} />
   </TouchableOpacity>
 ))
@@ -285,24 +286,24 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
               onPress={toggleSelectAll}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.headerSelectAll}
-              accessibilityLabel={allSelected ? '取消全选' : '全选'}
+              accessibilityLabel={sq(allSelected ? 'deselect_all' : 'select_all')}
             >
               <View style={[styles.batchCheck, { marginRight: 0, borderColor: colors.accent, backgroundColor: allSelected ? colors.accent : 'transparent' }]}>
                 <Text style={styles.batchCheckText}>{allSelected ? '✓' : ''}</Text>
               </View>
             </TouchableOpacity>
-            {btn(`加入歌单 (${count})`, () => {
-              if (!count) return toast('请先选择歌曲')
+            {btn(sq('add_to_list_n', { n: count }), () => {
+              if (!count) return toast(sq('please_select_songs'))
               onAddToList(getSelected())
             }, false, true)}
-            {btn(`稍后播放 (${count})`, () => {
-              if (!count) return toast('请先选择歌曲')
+            {btn(sq('play_later_n', { n: count }), () => {
+              if (!count) return toast(sq('please_select_songs'))
               const picked = getSelected()
               insertBatchLater(picked)
-              toast(`已添加 ${picked.length} 首到稍后播放`)
+              toast(sq('added_play_later_n', { n: picked.length }))
               batch.exit()
             }, false, true)}
-            {showDelete ? btn(`删除 (${count})`, () => { if (count) onDelete?.() }, false, true) : null}
+            {showDelete ? btn(sq('delete_n', { n: count }), () => { if (count) onDelete?.() }, false, true) : null}
           </>
         : <View style={styles.actionBlock}>
             <View style={styles.actionHeader}>
@@ -310,13 +311,13 @@ export const ListActionBar = memo(({ colors, batch, ids, songs = [], onPlayAll, 
                 <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}>
                   <Text style={styles.playAllIconText}>▶</Text>
                 </View>
-                <Text style={[styles.playAllTitle, { color: colors.text }]}>播放全部</Text>
+                <Text style={[styles.playAllTitle, { color: colors.text }]}>{sq('play_all')}</Text>
               </TouchableOpacity>
             <View style={styles.actionRight}>
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
             </View>
-            <Text numberOfLines={1} style={[styles.playAllSub, { color: colors.text3 }]}>{songs.length} 首 · {durationText}</Text>
+            <Text numberOfLines={1} style={[styles.playAllSub, { color: colors.text3 }]}>{sq('songs_duration', { n: songs.length, d: durationText })}</Text>
           </View>}
     </View>
   )
@@ -332,7 +333,7 @@ export const FilterDropdown = memo(({ colors, label, value, options, onChange }:
   onChange: (id: string) => void
 }) => {
   const [visible, setVisible] = useState(false)
-  const current = options.find(o => o.id == value)?.label ?? '全部'
+  const current = options.find(o => o.id == value)?.label ?? sq('filter_all')
   // 深色模式下药丸文字统一纯白；浅色沿用 text2 / text3
   const labelColor = usePillTextColor(colors.text2)
   const arrowColor = usePillTextColor(colors.text3)
@@ -374,10 +375,10 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
   const close = () => { setCreating(false); setNewName(''); onClose() }
   const createAndAdd = () => {
     const name = newName.trim()
-    if (!name) { toast('请输入歌单名称'); return }
+    if (!name) { toast(sq('enter_playlist_name')); return }
     // createList 支持直接带 list，一步完成「新建 + 加入」，无需二次查找 id
     void createList({ id: `userlist_${Date.now()}`, name, list: musics }).then(() => {
-      toast(`已新建「${name}」并加入 ${musics.length} 首`)
+      toast(sq('created_playlist_added', { name, n: musics.length }))
       close()
     })
   }
@@ -385,37 +386,37 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View style={styles.modalMask}>
         <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>加入到歌单</Text>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{sq('add_to_playlist')}</Text>
           {creating
             ? <View>
                 <TextInput
                   style={[styles.modalInput, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
                   value={newName}
                   onChangeText={setNewName}
-                  placeholder="新歌单名称"
+                  placeholder={sq('new_playlist_name')}
                   placeholderTextColor={colors.text3}
                   autoFocus
                 />
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
                   <TouchableOpacity onPress={() => { setCreating(false); setNewName('') }} style={styles.modalBtn}>
-                    <Text style={{ color: colors.text2, fontSize: 14 }}>返回</Text>
+                    <Text style={{ color: colors.text2, fontSize: 14 }}>{sq('back')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={createAndAdd} style={[styles.modalBtn, { backgroundColor: colors.accent, borderRadius: RADIUS.sm }]}>
-                    <Text style={{ color: '#fff', fontSize: 14 }}>创建并加入</Text>
+                    <Text style={{ color: '#fff', fontSize: 14 }}>{sq('create_and_add')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             : <>
                 <ScrollView style={{ maxHeight: 320 }}>
                   <TouchableOpacity onPress={() => setCreating(true)} style={styles.modalItem}>
-                    <Text style={{ color: colors.accent, fontSize: 14 }}>＋ 新建歌单并加入</Text>
+                    <Text style={{ color: colors.accent, fontSize: 14 }}>{sq('new_playlist_and_add')}</Text>
                   </TouchableOpacity>
                   {lists.map(l => {
-                    const label = l.id == 'default' ? '播放历史' : (l.name ?? l.id)
+                    const label = l.id == 'default' ? sq('playback_history') : (l.name ?? l.id)
                     return (
                       <TouchableOpacity key={l.id} onPress={() => {
                         void addListMusics(l.id, musics, settingState.setting['list.addMusicLocationType']).then(() => {
-                          toast(`已加入「${label}」`)
+                          toast(sq('added_to', { name: label }))
                           close()
                         })
                       }} style={styles.modalItem}>
@@ -425,7 +426,7 @@ export const AddToListModal = memo(({ colors, visible, musics, onClose }: {
                   })}
                 </ScrollView>
                 <TouchableOpacity onPress={close} style={styles.modalBtn}>
-                  <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+                  <Text style={{ color: colors.text2, fontSize: 14 }}>{sq('cancel')}</Text>
                 </TouchableOpacity>
               </>}
         </View>
@@ -476,7 +477,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
   const rowLast = { borderBottomWidth: 1, borderBottomLeftRadius: RADIUS.lg, borderBottomRightRadius: RADIUS.lg, overflow: 'hidden' as const }
   const emptyNode = loading
     ? <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
-    : (empty ?? <Empty colors={colors} text="没有找到歌曲" />)
+    : (empty ?? <Empty colors={colors} text={sq('no_songs_found')} />)
   return (
     <FlatList
       ref={listRef}
@@ -495,7 +496,7 @@ export const PagedSongList = memo(({ colors, songs, resetKey, expanded, header, 
       )}
       ListFooterComponent={hasMore
         ? <TouchableOpacity onPress={() => loadMore(true)} style={[styles.loadMore, { backgroundColor: colors.surface, borderColor: colors.line }, rowLast]}>
-            <Text style={{ color: colors.text2, fontSize: 12 }}>加载更多（还有 {songs.length - limit} 首）</Text>
+            <Text style={{ color: colors.text2, fontSize: 12 }}>{sq('load_more', { n: songs.length - limit })}</Text>
           </TouchableOpacity>
         : null}
       onEndReached={() => loadMore()}
@@ -527,11 +528,11 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
     <View style={styles.brand}>
       <View style={styles.brandRow}>
         <Image source={require('./logo.png')} style={styles.brandMark} resizeMode="cover" />
-        <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>悦悦哄睡</Text>
+        <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>{sq('app_name')}</Text>
       </View>
     </View>
     <View style={styles.navItems}>
-      <Text style={[styles.navGroupTitle, { color: colors.text3 }]}>音乐</Text>
+      <Text style={[styles.navGroupTitle, { color: colors.text3 }]}>{sq('music_group')}</Text>
       {items.map(item => {
         const active = item.id == activeId
         return (
@@ -550,18 +551,19 @@ export const SideNav = memo(({ colors, items, activeId, onSelect }: {
     </View>
     <View style={styles.navFooter}>
       <Text style={[styles.navVersion, { color: colors.text3 }]} numberOfLines={1}>
-        v{APP_VERSION} · 内部版本 {APP_VERSION_CODE}
+        v{APP_VERSION} · {sq('internal_version')} {APP_VERSION_CODE}
       </Text>
     </View>
   </View>
 ))
 SideNav.displayName = 'SideNav'
 
-/** 迷你条播放模式：顺序循环 → 随机循环 → 单曲循环，点击依次切换 */
+/** 迷你条播放模式：顺序循环 → 随机循环 → 单曲循环，点击依次切换。
+ * 只存 key，文案在渲染时经 sq() 取，避免模块级缓存住旧语言 */
 const PLAY_MODES = [
-  { id: MUSIC_TOGGLE_MODE.listLoop, icon: 'list-loop', label: '顺序循环' },
-  { id: MUSIC_TOGGLE_MODE.random, icon: 'list-random', label: '随机循环' },
-  { id: MUSIC_TOGGLE_MODE.singleLoop, icon: 'single-loop', label: '单曲循环' },
+  { id: MUSIC_TOGGLE_MODE.listLoop, icon: 'list-loop', labelKey: 'mode_list_loop' },
+  { id: MUSIC_TOGGLE_MODE.random, icon: 'list-random', labelKey: 'mode_random' },
+  { id: MUSIC_TOGGLE_MODE.singleLoop, icon: 'single-loop', labelKey: 'mode_single_loop' },
 ] as const
 
 export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
@@ -571,8 +573,8 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
 }) => {
   usePlayerTick()
   const music = playerState.playMusicInfo.musicInfo as LX.Music.MusicInfo | null
-  const name = music?.name ?? '暂无播放'
-  const singer = music?.singer ?? '点一下开始听歌'
+  const name = music?.name ?? sq('no_playing')
+  const singer = music?.singer ?? sq('tap_to_play')
   const progress = Math.max(0, Math.min(1, playerState.progress.progress || 0))
   const [seeking, setSeeking] = useState<number | null>(null)
   const [addMusics, setAddMusics] = useState<LX.Music.MusicInfo[]>([])
@@ -603,7 +605,7 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
     const index = PLAY_MODES.findIndex(m => m.id == currentMode.id)
     const next = PLAY_MODES[(index + 1) % PLAY_MODES.length]
     updateSetting({ 'player.togglePlayMethod': next.id })
-    toast(next.label)
+    toast(sq(next.labelKey))
   }
 
   const ratioOf = (evt: GestureResponderEvent) => {
@@ -669,13 +671,13 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
           </View>
         </TouchableOpacity>
         <View style={styles.miniControls}>
-          <TouchableOpacity onPress={togglePlayMode} style={styles.miniBtn} accessibilityLabel={`播放模式：${currentMode.label}`}>
+          <TouchableOpacity onPress={togglePlayMode} style={styles.miniBtn} accessibilityLabel={sq('play_mode', { name: sq(currentMode.labelKey) })}>
             <Icon name={currentMode.icon} color={colors.text2} size={19} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { if (!music) return; collected ? uncollectMusic() : collectMusic() }}
             style={styles.miniBtn}
-            accessibilityLabel={collected ? '取消收藏' : '收藏到我的收藏'}
+            accessibilityLabel={sq(collected ? 'cancel_collect' : 'collect')}
           >
             {collected
               ? <Image
@@ -685,7 +687,7 @@ export const MiniPlayer = memo(({ colors, isTablet, onOpen }: {
                 />
               : <Icon name="love" color={colors.text3} size={19} />}
           </TouchableOpacity>
-          <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel="添加到歌单">
+          <TouchableOpacity onPress={openAddToList} style={styles.miniBtn} accessibilityLabel={sq('added_to_playlist_acc')}>
             <Image
               source={inUserList ? require('./add_music_filled.png') : require('./add_music_outline.png')}
               resizeMode="contain"

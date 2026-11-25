@@ -46,6 +46,7 @@ import { handlePlay } from '@/components/OnlineList/listAction'
 import { getQueueIndex, insertBatchAndPlay } from '@/core/player/playQueue'
 import { AddToListModal, BatchEditButton, Chip, Empty, getSongsDurationText, HeaderBackText, ListActionBar, PagedSongList, SectionHeader, SectionShell, TrackRow, useBatchSelection, useCachedIds, usePlayerTick } from '../components'
 import { RADIUS, SPACE, UI, setColorMode, useColorMode, useLayoutMode, type SquareColors } from '../tokens'
+import { sq } from '../lang'
 
 const formatSize = (bytes: number) => {
   if (bytes <= 0) return '0 B'
@@ -61,17 +62,20 @@ const LIST_ROW_H = 52
 /** 歌曲行高（dp），用于二级拖拽排序换算 */
 const SONG_ROW_H = 64
 /** 内置 default 列表显示为「播放历史」 */
-export const DEFAULT_LIST_NAME = '播放历史'
+export const DEFAULT_LIST_NAME = () => sq('playback_history')
 const displayListName = (id: string, name?: string) =>
-  id == 'default' ? DEFAULT_LIST_NAME : (name ?? id)
+  id == 'default' ? DEFAULT_LIST_NAME() : (name ?? id)
 
-const QUEUE_STATUS_TEXT: Record<string, string> = {
-  pending: '等待中',
-  running: '缓存中',
-  done: '已完成',
-  skipped: '已缓存',
-  failed: '失败',
+/** 只存 key，渲染时经 sq() 取，避免模块级对象缓存住切换前的语言 */
+const QUEUE_STATUS_KEY: Record<string, string> = {
+  pending: 'cache_pending',
+  running: 'cache_running',
+  done: 'cache_done',
+  skipped: 'cache_skipped',
+  failed: 'cache_failed',
 }
+const queueStatusText = (status: string): string =>
+  sq(QUEUE_STATUS_KEY[status] ?? 'cache_pending')
 
 /** 歌单图标取歌单内第一首歌的封面，取不到时回退文件夹图标 */
 const PlaylistCover = ({ listId, colors }: { listId: string, colors: SquareColors }) => {
@@ -138,19 +142,19 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const handleCreate = () => {
     if (level == 'songs') {
       onGoDiscover()
-      toast('搜索歌曲后，用歌曲菜单的「添加到」加入当前歌单')
+      toast(sq('add_songs_hint'))
       return
     }
     setEditor({ mode: 'create', value: '' })
   }
 
   const handleDelete = () => {
-    if (!selected.length) { toast('请先选中要删除的项'); return }
-    void confirmDialog({ message: `确定删除选中的 ${selected.length} 项？` }).then(async ok => {
+    if (!selected.length) { toast(sq('select_items_to_delete')); return }
+    void confirmDialog({ message: sq('confirm_delete_n', { n: selected.length }) }).then(async ok => {
       if (!ok) return
       if (level == 'lists') {
         const ids = selected.filter(id => !BUILTIN_IDS.includes(id))
-        if (!ids.length) { toast('内置歌单不能删除'); return }
+        if (!ids.length) { toast(sq('builtin_cannot_delete')); return }
         await removeUserList(ids)
       } else {
         await removeListMusics(activeId, selected)
@@ -160,10 +164,10 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   }
 
   const handleRename = () => {
-    if (selected.length != 1) { toast('请选中一项再改名'); return }
+    if (selected.length != 1) { toast(sq('select_one_to_rename')); return }
     const id = selected[0]
     if (level == 'lists') {
-      if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能改名'); return }
+      if (BUILTIN_IDS.includes(id)) { toast(sq('builtin_cannot_rename')); return }
       setEditor({ mode: 'rename', value: lists.find(l => l.id == id)?.name ?? '' })
     } else {
       setEditor({ mode: 'songRename', value: songs.find(m => m.id == id)?.name ?? '' })
@@ -175,11 +179,11 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     const picked = getSelected()
     const target = picked.length ? picked : songs
     const count = enqueueCacheMusic(target, { listId: activeId, listName: activeName })
-    toast(count ? `已加入缓存队列 ${count} 首，可在缓存管理页查看` : '没有可缓存的歌曲')
+    toast(count ? sq('cache_queued_hint', { n: count }) : sq('no_cacheable'))
   }
   const handleAddSelectedToList = () => {
     const picked = getSelected()
-    if (!picked.length) { toast('请先选择歌曲'); return }
+    if (!picked.length) { toast(sq('please_select_songs')); return }
     setAddMusics(picked)
   }
 
@@ -187,10 +191,10 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
   const allListsSelected = lists.length > 0 && selected.length == lists.length
   const selectAllLists = () => setSelected(allListsSelected ? [] : lists.map(l => l.id))
   const handleCacheSelected = () => {
-    if (!selected.length) { toast('请先选中歌单'); return }
+    if (!selected.length) { toast(sq('select_playlists_first')); return }
     const musics = selected.flatMap(id => (getListMusicSync(id) ?? []) as LX.Music.MusicInfo[])
     const count = enqueueCacheMusic(musics)
-    toast(count ? `已加入缓存队列 ${count} 首` : '没有可缓存的歌曲')
+    toast(count ? sq('cache_queued_n', { n: count }) : sq('no_cacheable'))
   }
   // usePlayerTick 每秒重渲染，PanResponder 必须按 id 缓存，否则拖动途中实例被替换、手势中断
   const dragPanCache = useRef(new Map<string, ReturnType<typeof PanResponder.create>>())
@@ -223,10 +227,10 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
         // 明显拖动但不足一行时至少移动一位，避免「看着动了、松手顺序没变」
         if (!steps && Math.abs(g.dy) > LIST_ROW_H * 0.35) steps = g.dy > 0 ? 1 : -1
         if (!steps) return
-        if (BUILTIN_IDS.includes(id)) { toast('内置歌单不能调整顺序'); return }
+        if (BUILTIN_IDS.includes(id)) { toast(sq('builtin_cannot_reorder')); return }
         const userIds = (listState.userList as unknown as ListEntry[]).map(l => l.id)
         const fromIdx = userIds.indexOf(id)
-        if (fromIdx < 0) { toast('内置歌单不能调整顺序'); return }
+        if (fromIdx < 0) { toast(sq('builtin_cannot_reorder')); return }
         const pos = Math.max(0, Math.min(userIds.length - 1, fromIdx + steps))
         void updateUserListPosition(pos, [id])
       },
@@ -300,8 +304,8 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
     onPlaySong()
   }
   const deleteSelected = () => {
-    if (!selected.length) { toast('请先选中歌曲'); return }
-    void confirmDialog({ message: `从歌单移除选中的 ${selected.length} 首？` }).then(ok => {
+    if (!selected.length) { toast(sq('please_select_songs')); return }
+    void confirmDialog({ message: sq('confirm_remove_n', { n: selected.length }) }).then(ok => {
       if (ok) void removeListMusics(activeId, selected)
       batch.exit()
     })
@@ -331,22 +335,22 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
             <SectionShell colors={colors} style={{ flex: 1, marginBottom: 0, paddingBottom: 0 }}>
               <SectionHeader
                 colors={colors}
-                title="我的歌单"
-                hint={`${lists.length} 个`}
+                title={sq('my_playlists')}
+                hint={sq('lists_count', { n: lists.length })}
                 right={editing
                   ? <HeaderBackText colors={colors} onPress={() => { setEditing(false); clearSelection() }} />
                   : <BatchEditButton colors={colors} onPress={() => setEditing(true)} />}
               />
               {editing
                 ? <View style={styles.editActionRow}>
-                    <TouchableOpacity onPress={selectAllLists} style={styles.selectAllBtn} accessibilityLabel="全选">
+                    <TouchableOpacity onPress={selectAllLists} style={styles.selectAllBtn} accessibilityLabel={sq('select_all')}>
                       <Icon name={allListsSelected ? 'checkbox-marked' : 'checkbox-blank-outline'} color={colors.accent} size={18} />
                     </TouchableOpacity>
                     {([
-                      ['新建', handleCreate],
-                      ['删除', handleDelete],
-                      ['改名', handleRename],
-                      ['缓存', handleCacheSelected],
+                      [sq('create'), handleCreate],
+                      [sq('delete'), handleDelete],
+                      [sq('rename'), handleRename],
+                      [sq('cache'), handleCacheSelected],
                     ] as const).map(([label, onPress]) => (
                       <TouchableOpacity key={label} onPress={onPress} style={[styles.editBtn, { backgroundColor: colors.surface2, borderColor: colors.line }]}>
                         <Text style={[styles.editBtnText, { color: colors.text }]}>{label}</Text>
@@ -383,7 +387,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                         : <PlaylistCover listId={list.id} colors={colors} />}
                       <TouchableOpacity onPress={() => editing ? toggleSelect(list.id) : openList(list.id)} style={{ flex: 1 }}>
                         <Text style={[styles.manageName, { color: colors.text }]}>{displayListName(list.id, list.name)}</Text>
-                        <Text style={[styles.hint, { color: colors.text3 }]}>{count} 首</Text>
+                        <Text style={[styles.hint, { color: colors.text3 }]}>{sq('songs_count', { n: count })}</Text>
                       </TouchableOpacity>
                       {editing
                         ? <View {...getDragPan(list.id).panHandlers} collapsable={false} style={styles.dragHandle}>
@@ -401,7 +405,7 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
             songs={songs as LX.Music.MusicInfoOnline[]}
             resetKey={activeId}
             expanded={batchMode}
-            empty={<Empty colors={colors} text="这个歌单还没有歌曲，点「＋添加」去搜索添加" />}
+            empty={<Empty colors={colors} text={sq('empty_playlist')} />}
             header={
               <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
                 <SectionHeader
@@ -411,13 +415,13 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                 />
                 {batchMode
                   ? <View style={styles.editActionRow}>
-                      <TouchableOpacity onPress={() => batch.selectAll(songIds)} style={styles.selectAllBtn} accessibilityLabel="全选">
+                      <TouchableOpacity onPress={() => batch.selectAll(songIds)} style={styles.selectAllBtn} accessibilityLabel={sq('select_all')}>
                         <Icon name={songIds.length > 0 && selected.length == songIds.length ? 'checkbox-marked' : 'checkbox-blank-outline'} color={colors.accent} size={18} />
                       </TouchableOpacity>
                       {([
-                        ['删除', deleteSelected],
-                        ['缓存', handleCacheSongs],
-                        ['添加到歌单', handleAddSelectedToList],
+                        [sq('delete'), deleteSelected],
+                        [sq('cache'), handleCacheSongs],
+                        [sq('added_to_playlist_acc'), handleAddSelectedToList],
                       ] as const).map(([label, onPress]) => (
                         <TouchableOpacity key={label} onPress={onPress} style={[styles.editBtn, { backgroundColor: colors.surface2, borderColor: colors.line }]}>
                           <Text style={[styles.editBtnText, { color: colors.text }]}>{label}</Text>
@@ -428,12 +432,12 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
                       <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
                         <TouchableOpacity onPress={playAll} style={styles.playAllRow}>
                           <View style={[styles.playAllIcon, { backgroundColor: colors.accent }]}><Text style={styles.playAllIconText}>▶</Text></View>
-                          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>播放全部</Text>
+                          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{sq('play_all')}</Text>
                         </TouchableOpacity>
                         <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
                       </View>
                       <Text style={[styles.playAllSubSmall, { color: colors.text3 }]}>
-                        {songs.length} 首 · {getSongsDurationText(songs)}
+                        {sq('songs_duration', { n: songs.length, d: getSongsDurationText(songs) })}
                       </Text>
                     </View>}
               </SectionShell>
@@ -486,22 +490,22 @@ export const MyListView = memo(({ colors, isTablet, isCompact, onPlaySong, onGoD
         <View style={styles.modalMask}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {editor?.mode == 'create' ? '新建歌单' : '改名'}
+              {editor?.mode == 'create' ? sq('new_playlist') : sq('rename_playlist')}
             </Text>
             <TextInput
               style={[styles.modalInput, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
               value={editor?.value ?? ''}
               onChangeText={v => setEditor(e => e ? { ...e, value: v } : e)}
-              placeholder="输入名称"
+              placeholder={sq('input_name')}
               placeholderTextColor={colors.text3}
               autoFocus
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
               <TouchableOpacity onPress={() => setEditor(null)} style={styles.modalBtn}>
-                <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+                <Text style={{ color: colors.text2, fontSize: 14 }}>{sq('cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { void submitEditor() }} style={[styles.modalBtn, { backgroundColor: colors.accent, borderRadius: RADIUS.sm }]}>
-                <Text style={{ color: '#fff', fontSize: 14 }}>确定</Text>
+                <Text style={{ color: '#fff', fontSize: 14 }}>{sq('confirm')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -538,12 +542,12 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
   const [draft, setDraft] = useState('1024')
   const [capacityOpen, setCapacityOpen] = useState(false)
   const [customMode, setCustomMode] = useState(false)
-  const [nameMap, setNameMap] = useState<Record<string, string>>({ default: DEFAULT_LIST_NAME, love: '我的收藏' })
+  const [nameMap, setNameMap] = useState<Record<string, string>>({ default: DEFAULT_LIST_NAME(), love: sq('my_favorite') })
   const [queue, setQueue] = useState<CacheQueueState>(getCacheQueueState)
 
   const load = useCallback(async() => {
     const [g, s, m, lists] = await Promise.all([getCacheGroups(), getCacheStats(), getCacheMaxSize(), getUserLists()])
-    const names: Record<string, string> = { default: DEFAULT_LIST_NAME, love: '我的收藏' }
+    const names: Record<string, string> = { default: DEFAULT_LIST_NAME(), love: sq('my_favorite') }
     for (const l of lists) names[l.id] = l.name
     setNameMap(names)
     setGroups(g)
@@ -557,7 +561,7 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
 
   const applyMax = (mb: number) => {
     if (!Number.isFinite(mb) || mb < 16 || mb > 102400) {
-      toast('请输入 16 ~ 102400 之间的 MB 数')
+      toast(sq('invalid_mb'))
       setDraft(maxSize)
       return
     }
@@ -566,29 +570,29 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
       setDraft(String(mb))
       setCapacityOpen(false)
       setCustomMode(false)
-      toast(`缓存上限已设为 ${mb >= 1024 && mb % 1024 == 0 ? `${mb / 1024}G` : `${mb} MB`}`)
+      toast(sq('cache_limit_set', { size: mb >= 1024 && mb % 1024 == 0 ? `${mb / 1024}G` : `${mb} MB` }))
       void load()
     })
   }
   const saveMax = () => applyMax(parseInt(draft))
   const currentMb = parseInt(maxSize)
   const capacityLabel = CAPACITY_OPTIONS.find(o => o.mb == currentMb)?.label
-    ?? (customMode ? '其他（手填）' : `${maxSize} MB`)
+    ?? (customMode ? sq('other_custom') : `${maxSize} MB`)
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
       <SectionShell colors={colors}>
         <SectionHeader
           colors={colors}
-          title="正在缓存"
-          hint={`${queue.done}/${queue.total}${queue.paused ? ' · 已暂停' : ''}`}
+          title={sq('caching')}
+          hint={`${queue.done}/${queue.total}${queue.paused ? sq('cache_paused') : ''}`}
           right={queue.items.length
             ? <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity onPress={() => queue.paused ? resumeCacheQueue() : pauseCacheQueue()} style={styles.textBtn}>
-                  <Text style={{ color: colors.accent, fontSize: 13 }}>{queue.paused ? '继续' : '暂停'}</Text>
+                  <Text style={{ color: colors.accent, fontSize: 13 }}>{sq(queue.paused ? 'resume' : 'pause')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={clearFinishedCacheQueue} style={styles.textBtn}>
-                  <Text style={{ color: colors.text3, fontSize: 13 }}>清除已完成</Text>
+                  <Text style={{ color: colors.text3, fontSize: 13 }}>{sq('clear_completed')}</Text>
                 </TouchableOpacity>
               </View>
             : undefined}
@@ -598,33 +602,33 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
               <View key={item.key} style={[styles.groupRow, { borderBottomColor: colors.line }]}>
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={1} style={[styles.groupName, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.hint, { color: colors.text3 }]}>{item.singer} · {QUEUE_STATUS_TEXT[item.status]}</Text>
+                  <Text style={[styles.hint, { color: colors.text3 }]}>{item.singer} · {queueStatusText(item.status)}</Text>
                 </View>
                 <TouchableOpacity onPress={() => removeCacheQueueItem(item.key)} style={styles.textBtn}>
-                  <Text style={{ color: colors.danger, fontSize: 13 }}>移除</Text>
+                  <Text style={{ color: colors.danger, fontSize: 13 }}>{sq('remove')}</Text>
                 </TouchableOpacity>
               </View>
             ))
           : <View style={styles.cacheEmpty}>
-              <Text style={{ color: colors.text3, fontSize: 13 }}>暂无缓存任务</Text>
+              <Text style={{ color: colors.text3, fontSize: 13 }}>{sq('no_cache_tasks')}</Text>
             </View>}
       </SectionShell>
 
       <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="缓存管理" hint={`${stats.count} 首 · ${formatSize(stats.totalSize)}`} />
+        <SectionHeader colors={colors} title={sq('cache_manager')} hint={sq('songs_duration', { n: stats.count, d: formatSize(stats.totalSize) })} />
         <View style={styles.settingRow}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>播放自动缓存</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{sq('auto_cache')}</Text>
           <Switch value={autoCache} onValueChange={v => updateSetting({ 'cache.auto': v })} />
         </View>
         <View style={styles.settingRow}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>容量上限</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{sq('capacity_limit')}</Text>
           <TouchableOpacity onPress={() => setCapacityOpen(true)} style={[styles.input, { borderColor: colors.line, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }]}>
             <Text style={{ color: colors.text, fontSize: 14 }}>{capacityLabel}</Text>
           </TouchableOpacity>
         </View>
         {customMode
           ? <View style={styles.settingRow}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>自定义（MB）</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{sq('custom_mb')}</Text>
               <TextInput
                 style={[styles.input, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface2 }]}
                 value={draft}
@@ -633,27 +637,27 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
                 maxLength={6}
               />
               <TouchableOpacity onPress={saveMax} style={[styles.smallBtn, { backgroundColor: colors.accent }]}>
-                <Text style={styles.smallBtnText}>保存</Text>
+                <Text style={styles.smallBtnText}>{sq('save')}</Text>
               </TouchableOpacity>
             </View>
           : null}
-        <Text style={[styles.hint, { color: colors.text3 }]}>超过上限自动淘汰最旧的缓存</Text>
+        <Text style={[styles.hint, { color: colors.text3 }]}>{sq('cache_tip')}</Text>
       </SectionShell>
 
       <Modal visible={capacityOpen} transparent animationType="fade" onRequestClose={() => setCapacityOpen(false)}>
         <View style={styles.modalMask}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>缓存容量上限</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{sq('cache_limit_title')}</Text>
             {CAPACITY_OPTIONS.map(o => (
               <TouchableOpacity key={o.label} onPress={() => applyMax(o.mb)} style={styles.modalItem}>
                 <Text style={{ color: colors.text, fontSize: 14 }}>{o.label}（{o.mb} MB）</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity onPress={() => { setCustomMode(true); setCapacityOpen(false) }} style={styles.modalItem}>
-              <Text style={{ color: colors.accent, fontSize: 14 }}>其他（手填 MB）</Text>
+              <Text style={{ color: colors.accent, fontSize: 14 }}>{sq('other_manual_mb')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setCapacityOpen(false)} style={[styles.modalBtn, { alignSelf: 'flex-end' }]}>
-              <Text style={{ color: colors.text2, fontSize: 14 }}>取消</Text>
+              <Text style={{ color: colors.text2, fontSize: 14 }}>{sq('cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -662,28 +666,28 @@ export const CacheView = memo(({ colors }: { colors: SquareColors }) => {
       <SectionShell colors={colors}>
         <SectionHeader
           colors={colors}
-          title="按歌单管理"
+          title={sq('by_playlist')}
           right={<TouchableOpacity onPress={() => {
-            void confirmDialog({ message: '清空全部缓存歌曲？' }).then(ok => { if (ok) void clearCache().then(load) })
-          }} style={styles.textBtn}><Text style={{ color: colors.danger, fontSize: 13 }}>清空全部</Text></TouchableOpacity>}
+            void confirmDialog({ message: sq('clear_all_confirm') }).then(ok => { if (ok) void clearCache().then(load) })
+          }} style={styles.textBtn}><Text style={{ color: colors.danger, fontSize: 13 }}>{sq('clear_all')}</Text></TouchableOpacity>}
         />
         {groups.length
           ? groups.map(group => (
               <View key={group.id} style={[styles.groupRow, { borderBottomColor: colors.line }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.groupName, { color: colors.text }]}>
-                    {group.id == UNGROUPED_ID ? '其他' : (nameMap[group.id] ?? group.name)}
+                    {group.id == UNGROUPED_ID ? sq('other') : (nameMap[group.id] ?? group.name)}
                   </Text>
-                  <Text style={[styles.hint, { color: colors.text3 }]}>{group.count} 首 · {formatSize(group.size)}</Text>
+                  <Text style={[styles.hint, { color: colors.text3 }]}>{sq('songs_duration', { n: group.count, d: formatSize(group.size) })}</Text>
                 </View>
                 <TouchableOpacity onPress={() => {
                   void removeCacheByGroup(group.id).then(load)
                 }}>
-                  <Text style={{ color: colors.accent, fontSize: 13 }}>清空</Text>
+                  <Text style={{ color: colors.accent, fontSize: 13 }}>{sq('clear')}</Text>
                 </TouchableOpacity>
               </View>
             ))
-          : <Empty colors={colors} text="暂无缓存歌曲" />}
+          : <Empty colors={colors} text={sq('no_cache_songs')} />}
       </SectionShell>
     </ScrollView>
   )
@@ -703,31 +707,31 @@ export const SettingView = memo(({ colors, onOpenAdvanced, onBack }: {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACE.lg }}>
       <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-        <Text style={{ color: colors.accent, fontSize: 14 }}>‹ 返回</Text>
+        <Text style={{ color: colors.accent, fontSize: 14 }}>{sq('back')}</Text>
       </TouchableOpacity>
       <SectionShell colors={colors}>
         <SectionHeader
           colors={colors}
-          title="自定义音源"
-          right={<TouchableOpacity onPress={() => (apiModalRef.current as any)?.show()} style={styles.textBtn}><Text style={{ color: colors.accent, fontSize: 13 }}>导入 / 管理</Text></TouchableOpacity>}
+          title={sq('custom_source')}
+          right={<TouchableOpacity onPress={() => (apiModalRef.current as any)?.show()} style={styles.textBtn}><Text style={{ color: colors.accent, fontSize: 13 }}>{sq('import_manage')}</Text></TouchableOpacity>}
         />
         <Text style={[styles.hint, { color: colors.text3 }]}>
-          音源由应用自动选择，播放失败时自动切换，无需手动干预
+          {sq('source_hint')}
         </Text>
       </SectionShell>
 
       <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="外观" />
+        <SectionHeader colors={colors} title={sq('appearance')} />
         <View style={{ flexDirection: 'row' }}>
-          <Chip colors={colors} label="浅色" active={!isDark} onPress={() => setColorMode(false)} />
-          <Chip colors={colors} label="深色" active={isDark} onPress={() => setColorMode(true)} />
+          <Chip colors={colors} label={sq('light')} active={!isDark} onPress={() => setColorMode(false)} />
+          <Chip colors={colors} label={sq('dark')} active={isDark} onPress={() => setColorMode(true)} />
         </View>
       </SectionShell>
 
       <SectionShell colors={colors}>
-        <SectionHeader colors={colors} title="更多" />
+        <SectionHeader colors={colors} title={sq('more')} />
         <TouchableOpacity onPress={onOpenAdvanced} style={[styles.smallBtn, { backgroundColor: colors.surface2, alignSelf: 'flex-start' }]}>
-          <Text style={[styles.smallBtnText, { color: colors.text }]}>高级设置（完整选项）</Text>
+          <Text style={[styles.smallBtnText, { color: colors.text }]}>{sq('advanced_settings')}</Text>
         </TouchableOpacity>
       </SectionShell>
       <UserApiEditModal ref={apiModalRef} />
@@ -775,12 +779,12 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(songs)
-    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+    toast(n ? sq('cache_queued_n', { n }) : sq('no_cacheable'))
   }
   const deleteSelected = () => {
     const picked = getSelected()
-    if (!picked.length) { toast('请先选中歌曲'); return }
-    void confirmDialog({ message: `从播放队列移除选中的 ${picked.length} 首？` }).then(ok => {
+    if (!picked.length) { toast(sq('please_select_songs')); return }
+    void confirmDialog({ message: sq('confirm_remove_queue_n', { n: picked.length }) }).then(ok => {
       if (ok) void removeListMusics(LIST_IDS.TEMP, picked.map(m => m.id))
       batch.exit()
     })
@@ -794,13 +798,13 @@ export const PlayingQueueView = memo(({ colors }: { colors: SquareColors }) => {
           songs={songs}
           resetKey="playing_queue"
           expanded
-          empty={<Empty colors={colors} text="正在播放列表是空的，去点一首歌吧" />}
+          empty={<Empty colors={colors} text={sq('queue_empty')} />}
           header={
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
               <SectionHeader
                 colors={colors}
-                title="正在播放"
-                hint={`${songs.length} 首`}
+                title={sq('now_playing')}
+                hint={sq('songs_count', { n: songs.length })}
                 right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
               />
               <ListActionBar
@@ -901,9 +905,9 @@ export const NowPlayingView = memo(({ colors, onBack }: {
         </Animated.View>
       </View>
       <TouchableOpacity onPress={onBack} style={[styles.npCollapse, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.npCollapseText, { color: colors.text }]}>‹ 收起</Text>
+        <Text style={[styles.npCollapseText, { color: colors.text }]}>{sq('collapse')}</Text>
       </TouchableOpacity>
-      <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? '暂无播放'}</Text>
+      <Text style={[styles.npName, { color: colors.text }]} numberOfLines={1}>{music?.name ?? sq('no_playing')}</Text>
       <Text style={[styles.npSinger, { color: colors.text3 }]} numberOfLines={1}>{music?.singer ?? ''}</Text>
       <ScrollView ref={lyricScroll} style={styles.npLyric} contentContainerStyle={{ paddingVertical: SPACE.xl }}>
         {lines.length
@@ -913,7 +917,7 @@ export const NowPlayingView = memo(({ colors, onBack }: {
                 fontWeight: i == activeLine ? '600' : '400',
               }]}>{line.text}</Text>
             ))
-          : <Text style={[styles.npLyricText, { color: colors.text2 }]}>暂无歌词，换一首支持歌词的歌曲试试。</Text>}
+          : <Text style={[styles.npLyricText, { color: colors.text2 }]}>{sq('no_lyrics')}</Text>}
       </ScrollView>
     </View>
   )
@@ -924,7 +928,7 @@ NowPlayingView.displayName = 'NowPlayingView'
 export const AdvancedView = memo(({ colors, onBack }: { colors: SquareColors, onBack: () => void }) => (
   <View style={{ flex: 1 }}>
     <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: colors.surface, borderColor: colors.line, margin: SPACE.lg }]}>
-      <Text style={{ color: colors.accent, fontSize: 14 }}>‹ 返回设置</Text>
+      <Text style={{ color: colors.accent, fontSize: 14 }}>{sq('back_to_settings')}</Text>
     </TouchableOpacity>
     <View style={{ flex: 1 }}><SettingPage /></View>
   </View>

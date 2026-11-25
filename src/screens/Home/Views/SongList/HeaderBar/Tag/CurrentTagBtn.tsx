@@ -2,6 +2,7 @@ import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
+import { PILL_BASE_HEIGHT } from '@/utils/pillSize'
 import { usePillTextColor } from '@/screens/Square/tokens'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { View } from 'react-native'
@@ -48,7 +49,7 @@ const styles = createStyle({
     marginLeft: 4,
   },
   btn: {
-    minHeight: 36,
+    minHeight: PILL_BASE_HEIGHT,
     paddingLeft: 14,
     paddingRight: 14,
     justifyContent: 'center',

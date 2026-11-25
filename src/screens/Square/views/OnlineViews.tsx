@@ -24,6 +24,7 @@ import {
   useCachedIds,
 } from '../components'
 import { RADIUS, SPACE, useLayoutMode, type SquareColors } from '../tokens'
+import { sq } from '../lang'
 
 /** 一级：保留原有专辑网格、最新/最热等分类筛选 */
 export const SonglistView = memo(({ colors }: { colors: SquareColors }) => (
@@ -54,7 +55,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(songs)
-    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+    toast(n ? sq('cache_queued_n', { n }) : sq('no_cacheable'))
   }
   const durationText = getSongsDurationText(songs)
   const ids = songs.map(rowKey)
@@ -73,7 +74,7 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
             <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
               <SectionHeader
                 colors={colors}
-                title="排行榜"
+                title={sq('leaderboard')}
                 right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
               />
               <ListActionBar
@@ -123,14 +124,14 @@ export const LeaderboardView = memo(({ colors }: { colors: SquareColors }) => {
               <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md }}>
                 <Text style={{ color: '#fff', fontSize: 15 }}>▶</Text>
               </View>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>播放全部</Text>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{sq('play_all')}</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <BatchEditButton colors={colors} onPress={() => batch.setBatchMode(true)} />
             </View>
           </View>
           <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text3, marginLeft: 38 + SPACE.md, marginTop: 2, marginBottom: SPACE.xs }}>
-            {songs.length} 首 · {durationText}
+            {sq('songs_duration', { n: songs.length, d: durationText })}
           </Text>
         </View>
         <View style={{ flex: 1, paddingHorizontal: SPACE.md }}><LeaderboardVertical /></View>
@@ -170,7 +171,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
           : await getBoardDetailAll(payload.id)
         if (!cancelled) setSongs(list)
       } catch {
-        if (!cancelled) { setSongs([]); toast('加载失败，请稍后重试') }
+        if (!cancelled) { setSongs([]); toast(sq('load_failed')) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -192,7 +193,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(visibleSongs)
-    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+    toast(n ? sq('cache_queued_n', { n }) : sq('no_cacheable'))
   }
 
   return (
@@ -207,7 +208,7 @@ export const OnlineDetailView = memo(({ colors, isTablet, isCompact, payload, fi
           <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
             <SectionHeader
               colors={colors}
-              title={payload.name || (payload.mode == 'songlist' ? '歌单' : '排行榜')}
+              title={payload.name || (payload.mode == 'songlist' ? sq('playlist') : sq('leaderboard'))}
               right={<HeaderBackText colors={colors} onPress={batch.batchMode ? batch.exit : onBack} />}
             />
             <ListActionBar

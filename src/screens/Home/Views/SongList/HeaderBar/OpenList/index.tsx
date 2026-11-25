@@ -5,6 +5,7 @@ import Button from '@/components/common/Button'
 import Modal, { type ModalType } from './Modal'
 import { type Source } from '@/store/songlist/state'
 import { createStyle } from '@/utils/tools'
+import { PILL_BASE_HEIGHT } from '@/utils/pillSize'
 import { usePillTextColor } from '@/screens/Square/tokens'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
@@ -61,7 +62,7 @@ export default forwardRef<OpenListType, {}>((props, ref) => {
 
 const styles = createStyle({
   button: {
-    minHeight: 36,
+    minHeight: PILL_BASE_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     paddingLeft: 14,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWindowDimensions } from 'react-native'
 import { getData, saveData } from '@/plugins/storage'
+import { PILL_BASE_HEIGHT } from '@/utils/pillSize'
 
 /** musicsquare 设计令牌（oklch 近似为 hex） */
 export const COLOR = {
@@ -57,8 +58,9 @@ export const UI = {
   iconButtonSize: 32,
   dragHandleSize: 44,
   headerFontSize: 14,
-  /** 全站药丸/筛选菜单统一尺寸（2026-11-25 用户指定，含实时热搜与搜索记录 Chip） */
-  filterMinHeight: 36,
+  /** 全站药丸/筛选菜单统一尺寸（2026-11-25 用户指定，含实时热搜与搜索记录 Chip）。
+   * 平板基准调小（见 utils/pillSize.ts），避免 createStyle 缩放后药丸过高；字号不变 */
+  filterMinHeight: PILL_BASE_HEIGHT,
   filterFontSize: 13,
 } as const
 

@@ -24,22 +24,26 @@ import {
   useCachedIds,
 } from '../components'
 import { SPACE, type SquareColors } from '../tokens'
+import { sq } from '../lang'
 
 export interface SearchQuery {
   text: string
   seq: number
 }
 
-/** 网络不可用时的兜底词（保留哄睡场景常用词） */
-const FALLBACK_HOT_WORDS = ['周杰伦', '林俊杰', '陈奕迅', '邓紫棋', '毛不易', '轻音乐', '摇篮曲', '白噪音']
+/** 网络不可用时的兜底词（保留哄睡场景常用词）；按当前语言取，避免模块级缓存旧语言 */
+const getFallbackHotWords = () => sq('hot_words_fallback').split('|')
 const HOT_PAGE_SIZE = 8
 const HISTORY_SIZE = 3
 const ALL = 'all'
 /** 按「最高音质」分组，与 TrackRow 的 24bit/SQ/HQ 标签一一对应；每首歌只归一组 */
 const TOP_QUALITY_KEYS = ['flac24bit', 'flac', '320k', '128k'] as const
 const QUALITY_LABEL: Record<string, string> = {
-  flac24bit: '24bit', flac: 'SQ', '320k': 'HQ', '128k': '标准',
+  flac24bit: '24bit', flac: 'SQ', '320k': 'HQ',
 }
+/** 文案在渲染时取，避免模块级常量缓存住切换前的语言 */
+const getQualityLabel = (q: string): string =>
+  q == ALL ? sq('filter_all') : (q == '128k' ? sq('quality_standard') : (QUALITY_LABEL[q] ?? q))
 const getTopQuality = (m: LX.Music.MusicInfoOnline): string => {
   const q = (m.meta as (LX.Music.MusicInfoMeta_online & { _qualitys?: Record<string, any> }) | undefined)?._qualitys
   if (q?.flac24bit) return 'flac24bit'
@@ -61,7 +65,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   // 热搜词来自各音源实时榜单，加载失败才回退到静态推荐词
-  const [hotWords, setHotWords] = useState<string[]>(FALLBACK_HOT_WORDS)
+  const [hotWords, setHotWords] = useState<string[]>(getFallbackHotWords)
   const [hotLive, setHotLive] = useState(false)
   const [hotLoading, setHotLoading] = useState(false)
   const [hotPage, setHotPage] = useState(0)
@@ -126,7 +130,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
     return map
   }, [])
   const platformOptions = useMemo(() => [
-    { id: ALL, label: '全部' },
+    { id: ALL, label: sq('filter_all') },
     ...Array.from(new Set(results.map(m => m.source))).map(id => ({ id, label: sourceName[id] ?? id })),
   ], [results, sourceName])
   const qualityOptions = useMemo(() => {
@@ -148,7 +152,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
   }
   const cacheAll = () => {
     const n = enqueueCacheMusic(visibleResults)
-    toast(n ? `已加入缓存队列 ${n} 首` : '没有可缓存的歌曲')
+    toast(n ? sq('cache_queued_n', { n }) : sq('no_cacheable'))
   }
 
   useEffect(() => {
@@ -182,11 +186,11 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
             <SectionShell colors={colors}>
               <SectionHeader
                 colors={colors}
-                title="发现音乐"
-                hint={hotLoading ? '热搜加载中…' : hotLive ? '实时热搜' : '推荐词'}
+                title={sq('discover')}
+                hint={hotLoading ? sq('hot_loading') : hotLive ? sq('hot_live') : sq('recommended')}
                 right={hotWords.length > HOT_PAGE_SIZE
                   ? <TouchableOpacity onPress={onShuffleHotWords} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-                      <Text style={{ color: colors.accent, fontSize: 12 }}>换一批</Text>
+                      <Text style={{ color: colors.accent, fontSize: 12 }}>{sq('shuffle')}</Text>
                     </TouchableOpacity>
                   : undefined}
               />
@@ -195,11 +199,11 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
               </View>
             </SectionShell>
             <SectionShell colors={colors}>
-              <SectionHeader colors={colors} title="搜索记录" />
+              <SectionHeader colors={colors} title={sq('search_history')} />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                 {history.length
                   ? history.map((word, i) => <Chip key={`${word}_${i}`} colors={colors} label={word} onPress={() => onHotWord(word)} />)
-                  : <Text style={{ color: colors.text3, fontSize: 13 }}>还没有搜索记录</Text>}
+                  : <Text style={{ color: colors.text3, fontSize: 13 }}>{sq('no_search_history')}</Text>}
               </View>
             </SectionShell>
             {searched
@@ -207,7 +211,7 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                   <SectionShell colors={colors} style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }}>
                     <SectionHeader
                       colors={colors}
-                      title="搜索结果"
+                      title={sq('search_results')}
                       hint={query.text}
                       right={batch.batchMode ? <HeaderBackText colors={colors} onPress={batch.exit} /> : undefined}
                     />
@@ -228,19 +232,19 @@ export const DiscoverSearchView = memo(({ colors, isTablet, isCompact, query, on
                     backgroundColor: colors.surface,
                     borderBottomWidth: 1, borderBottomColor: colors.line,
                   }}>
-                    <FilterDropdown colors={colors} label="平台" value={platform} options={platformOptions}
+                    <FilterDropdown colors={colors} label={sq('platform')} value={platform} options={platformOptions}
                       onChange={id => { setPlatform(id); batch.selectAll([]) }} />
-                    <FilterDropdown colors={colors} label="音质" value={quality}
-                      options={qualityOptions.map(q => ({ id: q, label: q == ALL ? '全部' : (QUALITY_LABEL[q] ?? q) }))}
+                    <FilterDropdown colors={colors} label={sq('quality')} value={quality}
+                      options={qualityOptions.map(q => ({ id: q, label: getQualityLabel(q) }))}
                       onChange={id => { setQuality(id); batch.selectAll([]) }} />
                   </View>
                 </View>
               : null}
             {!searched
               ? <SectionShell colors={colors}>
-                  <SectionHeader colors={colors} title="开始聆听" hint="使用提示" />
+                  <SectionHeader colors={colors} title={sq('start_listening')} hint={sq('usage_tip')} />
                   <Text style={{ color: colors.text2, fontSize: 13, lineHeight: 22 }}>
-                    点上方实时热搜词（可点「换一批」），或在搜索框输入歌名 / 歌手开始找歌。结果可播放全部、缓存全部、加入歌单；底部播放条可拖动进度、收藏到我的收藏。
+                    {sq('intro')}
                   </Text>
                 </SectionShell>
               : null}

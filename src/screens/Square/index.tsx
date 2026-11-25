@@ -10,6 +10,8 @@ import { LeaderboardView, OnlineDetailView, SonglistView } from './views/OnlineV
 import { setSquareDetailHandler, type SquareDetailPayload } from '@/core/squareBridge'
 import { addSquareHistoryWord } from '@/core/search/search'
 import { AdvancedView, CacheView, MyListView, NowPlayingView, PlayingQueueView, SettingView } from './views/LibraryViews'
+import { sq } from './lang'
+import { useSettingValue } from '@/store/setting/hook'
 
 // Square 全站是固定 dp 布局；系统「字体大小/显示大小」放大（部分设备 font_scale=1.5）
 // 会把固定高度的搜索框、按钮文字撑到变形，这里统一关闭 RN 文本的系统字体缩放
@@ -17,20 +19,23 @@ for (const comp of [Text, TextInput] as any[]) {
   comp.defaultProps = { ...(comp.defaultProps ?? {}), allowFontScaling: false }
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { id: 'discover', label: '发现音乐', icon: 'search-2' },
-  { id: 'playing', label: '正在播放', icon: 'play' },
-  { id: 'songlist', label: '热门歌单', icon: 'album' },
-  { id: 'leaderboard', label: '排行榜', icon: 'leaderboard' },
-  { id: 'mylist', label: '我的歌单', icon: 'love' },
-  { id: 'cache', label: '缓存管理', icon: 'download-2' },
-  { id: 'setting', label: '设置', icon: 'setting' },
+/** 导航文案随语言实时生成，不能写成模块级常量 */
+const getNavItems = (): NavItem[] => [
+  { id: 'discover', label: sq('nav_discover'), icon: 'search-2' },
+  { id: 'playing', label: sq('nav_playing'), icon: 'play' },
+  { id: 'songlist', label: sq('nav_songlist'), icon: 'album' },
+  { id: 'leaderboard', label: sq('nav_leaderboard'), icon: 'leaderboard' },
+  { id: 'mylist', label: sq('nav_mylist'), icon: 'love' },
+  { id: 'cache', label: sq('nav_cache'), icon: 'download-2' },
+  { id: 'setting', label: sq('nav_setting'), icon: 'setting' },
 ]
 
 /** musicsquare 风格主界面：平板常驻侧栏 / 手机抽屉，600dp 实时响应 */
 export default ({ componentId }: { componentId: string }) => {
   const colors = useSquareColors()
   const isDarkMode = useColorMode()
+  // 订阅语言变化：langId 改变时重渲染，下面 key 会强制重建视图树刷新所有文案
+  const langId = useSettingValue('common.langId')
   const { isTablet, isCompact } = useLayoutMode()
   const [activeView, setActiveView] = useState('discover')
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -159,7 +164,7 @@ export default ({ componentId }: { componentId: string }) => {
   const sideNav = (
     <SideNav
       colors={colors}
-      items={NAV_ITEMS}
+      items={getNavItems()}
       activeId={activeView}
       onSelect={handleSelect}
       isTablet={isTablet}
@@ -167,7 +172,7 @@ export default ({ componentId }: { componentId: string }) => {
   )
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+    <View key={String(langId)} style={[styles.root, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.header} />
       {isTablet ? <View style={{ width: SIDEBAR_W }}>{sideNav}</View> : null}
 
@@ -191,8 +196,8 @@ export default ({ componentId }: { componentId: string }) => {
                   onChangeText={scoped ? setFilterText : setSearchText}
                   onSubmit={scoped ? () => {} : doSearch}
                   placeholder={browseDetail
-                    ? (browseDetail.mode == 'songlist' ? '在歌单内搜索…' : '在排行榜内搜索…')
-                    : '输入歌名 / 歌手，回车搜索…'}
+                    ? (browseDetail.mode == 'songlist' ? sq('search_in_playlist') : sq('search_in_leaderboard'))
+                    : sq('search_placeholder')}
                 />
               </View>
             )

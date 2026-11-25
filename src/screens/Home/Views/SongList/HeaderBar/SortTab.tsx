@@ -5,6 +5,7 @@ import songlistState, { type SortInfo, type Source } from '@/store/songlist/stat
 import { useI18n } from '@/lang'
 import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
+import { PILL_BASE_HEIGHT } from '@/utils/pillSize'
 import { usePillTextColor } from '@/screens/Square/tokens'
 
 export interface SortTabProps {
@@ -53,7 +54,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
 
 const styles = createStyle({
   button: {
-    minHeight: 36,
+    minHeight: PILL_BASE_HEIGHT,
     justifyContent: 'center',
     borderRadius: 999,
     borderWidth: 1,
@@ -64,7 +65,7 @@ const styles = createStyle({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 36,
+    minHeight: PILL_BASE_HEIGHT,
     paddingLeft: 14,
     paddingRight: 14,
   },
